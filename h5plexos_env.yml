@@ -1,0 +1,5 @@
+name: h5plexos
+dependencies:
+  - python=3
+  - h5py
+
