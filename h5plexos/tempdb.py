@@ -247,6 +247,26 @@ def load(source, dbfilename=None, create_db_file=True, remove_invalid_chars=Fals
             subs['text'] = "text.value"
             subs['textjoin'] = "LEFT OUTER JOIN text ON text.data_id = data.data_id"
         dbcon.execute(cmd.format(**subs))
+
+    # Instantiate a table and index for faster access to key mapping -> dset location
+    dbcon.execute("""CREATE TABLE key_to_dataset AS
+        SELECT k.key_id, c.name AS cls_name,
+        o.name AS obj_name, p.name AS prop_name,
+        ki.period_type_id, k.phase_id,
+        p.is_multi_band, k.band_id, u.value AS unit,
+        par.name AS parent_name
+        FROM key k
+        INNER JOIN key_index ki ON k.key_id=ki.key_id
+        INNER JOIN membership m ON m.membership_id=k.membership_id
+        INNER JOIN property p ON p.property_id=k.property_id
+        INNER JOIN object par ON par.object_id=m.parent_object_id
+        INNER JOIN unit u ON p.unit_id=u.unit_id
+        INNER JOIN object o ON m.child_object_id=o.object_id
+        INNER JOIN class c ON m.child_class_id=c.class_id""")
+
+    dbcon.execute("""CREATE UNIQUE INDEX key_period_idx ON
+        key_to_dataset (period_type_id, key_id)""")
+
     LOGGER.info('Loaded %s rows in %d seconds',row_count,(time.time()-start_time))
     if has_resource:
         LOGGER.info('Memory usage: %s',resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
