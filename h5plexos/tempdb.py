@@ -250,19 +250,21 @@ def load(source, dbfilename=None, create_db_file=True, remove_invalid_chars=Fals
 
     # Instantiate a table and index for faster access to key mapping -> dset location
     dbcon.execute("""CREATE TABLE key_to_dataset AS
-        SELECT k.key_id, c.name AS cls_name,
-        o.name AS obj_name, p.name AS prop_name,
+        SELECT k.key_id,
+        co.name as collection, cl.name AS parent_class,
+        o1.name AS parent_name, o2.name AS child_name,
+        p.name AS prop_name,
         ki.period_type_id, k.phase_id,
-        p.is_multi_band, k.band_id, u.value AS unit,
-        par.name AS parent_name
+        p.is_multi_band, k.band_id, u.value AS unit
         FROM key k
         INNER JOIN key_index ki ON k.key_id=ki.key_id
         INNER JOIN membership m ON m.membership_id=k.membership_id
         INNER JOIN property p ON p.property_id=k.property_id
-        INNER JOIN object par ON par.object_id=m.parent_object_id
+        INNER JOIN object o1 ON m.parent_object_id=o1.object_id
+        INNER JOIN object o2 ON m.child_object_id=o2.object_id
         INNER JOIN unit u ON p.unit_id=u.unit_id
-        INNER JOIN object o ON m.child_object_id=o.object_id
-        INNER JOIN class c ON m.child_class_id=c.class_id""")
+        INNER JOIN class cl ON m.parent_class_id=cl.class_id
+        INNER JOIN collection co ON m.collection_id=co.collection_id""")
 
     dbcon.execute("""CREATE UNIQUE INDEX key_period_idx ON
         key_to_dataset (period_type_id, key_id)""")
