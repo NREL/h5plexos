@@ -182,8 +182,8 @@ def process_solution(zipfilename, h5filename=None):
             else:
                 collection = '.'.join([parent_class, collection])
                 obj_idx = np.where(
-                    relations_group[collection]["parent"] == bytes(parent_name, "UTF8") &
-                    relations_group[collection]["child"] == bytes(child_name, "UTF8")
+                    (relations_group[collection]["parent"] == bytes(parent_name, "UTF8")) &
+                    (relations_group[collection]["child"] == bytes(child_name, "UTF8"))
                 )[0][0]
 
             period_name = 'period_%d'%period_type_id

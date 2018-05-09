@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='h5plexos',
-      version='0.1.0',
+      version='0.2.0',
       packages=['h5plexos'],
       entry_points={
           'console_scripts': [
