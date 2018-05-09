@@ -11,7 +11,7 @@ import h5py
 import numpy as np
 
 from . import tempdb
-from .classmeta import create_metadata_dataset
+from .metadata import create_object_dataset, create_collection_dataset
 
 def process_solution(zipfilename, h5filename=None):
     """Read in the plexos solution zipfile and save data to an hdf5 file
@@ -65,24 +65,43 @@ def process_solution(zipfilename, h5filename=None):
     cur2 = dbcon.cursor()
 
     # Set up the HDF5 file
-    data_group = h5file.create_group("data") # Holds object property values
-    metadata_group = h5file.create_group("metadata") # Holds object metadata
+    data_group = h5file.create_group("data") # Holds property values
+    metadata_group = h5file.create_group("metadata")
+    objects_group = metadata_group.create_group("objects")
+    collections_group = metadata_group.create_group("collections")
+    time_grp = metadata_group.create_group("times")
 
-    # Create HDF5 datasets and groups for each class of objects
+    # Create HDF5 metadata datasets for each type of object/membership
     object_counts = {}
-    cur.execute("SELECT * FROM class")
-    for row in cur.fetchall():
+    cur.execute("""SELECT DISTINCT
+        c.name AS collection, c.collection_id as collection_id,
+        c1.name AS parent_class, c1.class_id AS parent_class_id,
+        c2.name AS child_class, c2.class_id AS child_class_id
+        FROM membership m
+        INNER JOIN collection c ON m.collection_id = c.collection_id
+        INNER JOIN class c1 ON m.parent_class_id = c1.class_id
+        INNER JOIN class c2 ON m.child_class_id = c2.class_id""")
 
-        c_meta = dict(zip([d[0] for d in cur.description], row))
-        cls_data_grp = data_group.create_group(c_meta['name'])
-        cls_metadata_dset = create_metadata_dataset(c_meta, cur2, metadata_group)
-        object_counts[c_meta['name']] = len(cls_metadata_dset)
+    for (collection, collection_id, parent_class, parent_class_id,
+         child_class, child_class_id) in cur.fetchall():
+
+        if parent_class == "System":
+            data_group.create_group(child_class) # TODO: Generate these on the fly
+            dset, dset_name = create_object_dataset(
+                child_class, child_class_id, cur2, objects_group)
+
+        else:
+            dset, dset_name = create_collection_dataset(
+                collection, collection_id, parent_class, parent_class_id,
+                child_class, child_class_id, cur2, collections_group)
+
+        print(dset_name, len(dset))
+        object_counts[dset_name] = len(dset)
 
     # Add time lists for each period.  Each period has its own way of storing time
     timestep_counts = {}
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' and name LIKE 'period_%'")
     period_list = [x[0] for x in cur.fetchall()]
-    time_grp = metadata_group.create_group("times")
 
     if "period_0" in period_list:
         cur.execute("SELECT datetime FROM period_0 ORDER BY interval_id")
@@ -191,7 +210,7 @@ def process_solution(zipfilename, h5filename=None):
             # If this bottlenecks maybe pre-generate a hash table
             # during metadata creation
             obj_idx = np.where(
-                metadata_group[cls_name]["name"] == bytes(obj_name, "UTF8"))[0][0]
+                objects_group[cls_name]["name"] == bytes(obj_name, "UTF8"))[0][0]
             dset[obj_idx, :] = np.pad(value_data,
                                       (0, n_timesteps-len(value_data)),
                                       'constant', constant_values=np.nan)
