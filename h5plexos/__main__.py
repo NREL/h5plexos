@@ -1,5 +1,5 @@
 import sys
-from .buildh5 import process_solution
+from .process import process_solution
 
 def main(args=None):
 

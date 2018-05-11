@@ -1,9 +1,9 @@
 import os
 import unittest
 import numpy as np
-from h5plexos import process_solution
+from h5plexos.process import process_solution
 
-class TestPlexosSolution(unittest.TestCase):
+class TestPlexosProcessSolution(unittest.TestCase):
 
     def test_process(self):
         """Verify the zip file is processed properly
