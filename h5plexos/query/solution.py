@@ -31,6 +31,12 @@ class PLEXOSSolution:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
+    def __getattr__(self, object_class):
+
+        def _partial_query_objects(*args, **kwargs):
+            return self.query_objects(object_class, *args, **kwargs)
+
+        return _partial_query_objects
 
     # Query methods
 
