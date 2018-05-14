@@ -41,24 +41,30 @@ class PLEXOSSolution:
     # Query methods
 
     def query_objects(self, object_class, prop,
-                     names=None, categories=None,
-                     bands=None,
-                     timescale="interval", timespan=None,
+                     names=slice(None), categories=slice(None),
+                     timescale="interval", timespan=slice(None),
                      phase="ST"):
 
-        if not names:
-            names = slice(None)
+        #TODO: Time slicing still not supported
+        timespan = slice(None)
 
-        if not categories:
-            category = slice(None)
+        obj_lookup = self.objects[object_class].loc[(categories, names),]
+        data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
 
-        obj_lookup = self.objects[object_class].loc[(category, names),]
+        dset = self.h5file[data_path]
+        n_bands = dset.shape[2]
+        data = dset[obj_lookup.values, timespan, :]
 
-        # Doesn't support bands or time slicing (yet)
-        data_path = ("/data/" + object_class + "/" + prop + "/"
-                     + timescale + "/" + phase)
-        data = self.h5file[data_path][obj_lookup.values, :]
+        # Multiindex on category, name, property, time, band
+        # TODO: Something cleaner than this!
+        idx = pd.MultiIndex.from_product(
+            [[x for x in obj_lookup.index], # List object categories and names
+             [prop], # Report property (in preperation for multi-property queries)
+             self.timestamps[timescale], # List all timestamps (but eventually not)
+             range(1, n_bands+1)] # List all bands
+        )
+        idx = pd.MultiIndex.from_tuples(
+            [(c, n, p, t, b) for ((c, n), p, t, b) in idx],
+            names=["category", "name", "property", "timestamp", "band"])
 
-        return pd.DataFrame(data=data.T,
-                            index=self.timestamps[timescale],
-                            columns=obj_lookup.index)
+        return pd.Series(data=data.reshape(-1), index=idx)

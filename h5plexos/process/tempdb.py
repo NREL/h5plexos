@@ -255,8 +255,7 @@ def load(source, dbfilename=None, create_db_file=True, remove_invalid_chars=Fals
         co.name as collection,
         o1.name AS parent_name, o2.name AS child_name,
         p.name AS prop_name,
-        ki.period_type_id, k.phase_id,
-        p.is_multi_band, k.band_id, u.value AS unit
+        ki.period_type_id, k.phase_id, k.band_id, u.value AS unit
         FROM key k
         INNER JOIN key_index ki ON k.key_id=ki.key_id
         INNER JOIN membership m ON m.membership_id=k.membership_id

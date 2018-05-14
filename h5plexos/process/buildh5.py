@@ -92,8 +92,15 @@ def process_solution(zipfilename, h5filename=None):
         relations_group = metadata_group.create_group("relations")
         times_group = metadata_group.create_group("times")
 
+        # Predetermine number of bands associated with each property
+        cur.execute("""SELECT p.name, MAX(k.band_id)
+            FROM key k
+            INNER JOIN property p ON k.property_id = p.property_id
+            GROUP BY p.name""")
+        band_counts = {prop: n_bands for (prop, n_bands) in cur.fetchall()}
+
         # Create HDF5 metadata datasets for each type of object/membership
-        object_counts = {}
+        entity_counts = {}
         cur.execute("""SELECT DISTINCT
             c.name AS collection, c.collection_id as collection_id,
             c1.name AS parent_class, c1.class_id AS parent_class_id,
@@ -102,7 +109,6 @@ def process_solution(zipfilename, h5filename=None):
             INNER JOIN collection c ON m.collection_id = c.collection_id
             INNER JOIN class c1 ON m.parent_class_id = c1.class_id
             INNER JOIN class c2 ON m.child_class_id = c2.class_id""")
-
         for (collection, collection_id, parent_class, parent_class_id,
             child_class, child_class_id) in cur.fetchall():
 
@@ -117,13 +123,12 @@ def process_solution(zipfilename, h5filename=None):
                     cur2, relations_group)
 
             print(len(dset), dset_name)
-            object_counts[dset_name] = len(dset)
+            entity_counts[dset_name] = len(dset)
 
         # Create HDF5 metadata datasets for time indices in each timescale/period
         timestep_counts = {}
         cur.execute("SELECT name FROM sqlite_master " +
                     "WHERE type='table' and name LIKE 'period_%'")
-
         for (period_name,) in cur.fetchall():
             period_num = period_name_to_num(period_name)
             timescale = timescales[period_num]
@@ -169,10 +174,9 @@ def process_solution(zipfilename, h5filename=None):
                 length = int(row[1])
                 value_data = list(struct.unpack('<%dd'%length, bin_file.read(8*length)))
 
-                # Need property.name, object.name, class.name, phase_id
                 cur2.execute("""SELECT parent_class, child_class, collection,
                     parent_name, child_name, prop_name,
-                    period_type_id, phase_id, is_multi_band, band_id, unit
+                    period_type_id, phase_id, band_id, unit
                     FROM key_to_dataset
                     WHERE key_id=? AND period_type_id=?""", (row[0], period))
 
@@ -184,53 +188,49 @@ def process_solution(zipfilename, h5filename=None):
 
                 (parent_class, child_class, collection,
                  parent_name, child_name, prop_name,
-                 period_type_id, phase_id, is_multi_band, band_id, unit) = dataset[0]
+                 period_type_id, phase_id, band_id, unit) = dataset[0]
 
                 # If index lookups bottleneck performance, maybe pre-generate
                 # hash tables during metadata creation
                 if parent_class == "System":
-                    dset_name = object_dset_name(child_class)
+                    collection_name = object_dset_name(child_class)
                     obj_idx = np.where(
-                        objects_group[dset_name]["name"] ==
+                        objects_group[collection_name]["name"] ==
                         bytes(child_name, "UTF8"))[0][0]
 
                 else:
-                    dset_name = relation_dset_name(parent_class, collection)
+                    collection_name = relation_dset_name(parent_class, collection)
                     obj_idx = np.where(
-                        (relations_group[dset_name]["parent"] ==
+                        (relations_group[collection_name]["parent"] ==
                          bytes(parent_name, "UTF8")) &
-                        (relations_group[dset_name]["child"] ==
+                        (relations_group[collection_name]["child"] ==
                          bytes(child_name, "UTF8"))
                     )[0][0]
 
                 timescale = timescales[period_type_id]
                 phase = phases[phase_id]
-                # period_name = 'period_%d'%period_type_id
-                # phase_name = 'phase_%d'%phase_id
-                dataset_path = '/'.join([dset_name, prop_name, timescale, phase])
+                dataset_path = '/'.join([phase, timescale, collection_name, prop_name])
                 n_timesteps = timestep_counts[timescale]
-
-                if is_multi_band == "true":
-                    dataset_path = dataset_path + '/band_%d'%band_id
 
                 logging.info("Inserting data from key %s to dataset_path %s",
                             row[0], dataset_path)
 
-                if dataset_path not in data_group:
-                    n_objects = object_counts[dset_name]
-                    dset = data_group.create_dataset(dataset_path, dtype=np.float64,
-                                                    shape=(n_objects, n_timesteps),
-                                                    chunks=(1, n_timesteps),
-                                                    compression="gzip",
-                                                    compression_opts=1)
-                    dset.attrs['unit'] = unit
-
-                else:
+                if dataset_path in data_group:
                     dset = data_group[dataset_path]
 
-                dset[obj_idx, :] = np.pad(value_data,
-                                        (0, n_timesteps-len(value_data)),
-                                        'constant', constant_values=np.nan)
+                else:
+                    n_entities = entity_counts[collection_name]
+                    n_bands = band_counts[prop_name]
+                    dset = data_group.create_dataset(
+                        dataset_path, dtype=np.float64,
+                        shape=(n_entities, n_timesteps, n_bands),
+                        chunks=(1, n_timesteps, n_bands),
+                        compression="gzip", compression_opts=1)
+                    dset.attrs['unit'] = unit
+
+                dset[obj_idx, :, band_id-1] = np.pad(
+                    value_data, (0, n_timesteps-len(value_data)),
+                    'constant', constant_values=np.nan)
                 num_read += length
 
             logging.info("Read %s values", num_read)
