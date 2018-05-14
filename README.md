@@ -59,12 +59,12 @@ with PLEXOSSolution("PLEXOS_Solution.h5") as db:
     # Flow data for all lines
     lineflow = db.line("Flow")
 
+    # Load for CAISO and ERCOT regions
+    regionload = db.region("Load", names=["CAISO", "ERCOT"])
 
-	# Load for CAISO and ERCOT regions
-	regionload = db.region("Load", names=["CAISO", "ERCOT"])
-
-	# Generation for units in the PV and Wind categories
+    # Generation for units in the PV and Wind categories
     vggeneration = db.generator("Generation", categories=["PV", "Wind"])
+
 ```
 
 Queries return values in a Pandas series with a `MultiIndex` describing object category, object name, property name, timestamp, and value band. The standard Pandas tools can then be used for [aggregation](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.groupby.html), [unstacking](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.unstack.html), etc.
