@@ -34,6 +34,8 @@ def create_time_dset(timescale, cur, h5group):
 
 def create_object_dset(class_name, class_id, cur, h5group):
 
+    #TODO: Avoid fixed-length strings? Will truncate long names.
+    # Or at least throw a warning if truncation happens?
     meta_dtype = np.dtype([
         ("name", "S64"),
         ("category", "S64")
@@ -44,9 +46,9 @@ def create_object_dset(class_name, class_id, cur, h5group):
         INNER JOIN category cat ON ob.category_id=cat.category_id
         WHERE ob.class_id=?""", [class_id])
 
-    #TODO: Avoid fixed-length strings? Will truncate long names.
-    # Or at least throw a warning if truncation happens?
-    data = np.array([row for row in cur.fetchall()], dtype=meta_dtype)
+    data = [row for row in cur.fetchall()]
+    dset_idxs = {n: i for (i, (n, c)) in enumerate(data)}
+    data = np.array(data, dtype=meta_dtype)
 
     dset_name = object_dset_name(class_name)
     dset = h5group.create_dataset(
@@ -54,7 +56,7 @@ def create_object_dset(class_name, class_id, cur, h5group):
         compression="gzip", compression_opts=1
     )
 
-    return dset, dset_name
+    return dset, dset_name, dset_idxs
 
 
 def create_relation_dset(parent_class, collection,
@@ -72,10 +74,12 @@ def create_relation_dset(parent_class, collection,
         INNER JOIN object o2 ON m.child_object_id = o2.object_id
         WHERE c.collection_id = ?""", (collection_id,))
 
-    data = np.array([row for row in cur.fetchall()], dtype=relation_dtype)
+    data = [row for row in cur.fetchall()]
+    dset_idxs = {(p, c): i for (i, (p, c)) in enumerate(data)}
+    data = np.array(data, dtype=relation_dtype)
 
     dset_name = relation_dset_name(parent_class, collection)
     dset = h5group.create_dataset(dset_name,
         data=data, compression="gzip", compression_opts=1)
 
-    return dset, dset_name
+    return dset, dset_name, dset_idxs

@@ -101,6 +101,7 @@ def process_solution(zipfilename, h5filename=None):
 
         # Create HDF5 metadata datasets for each type of object/membership
         entity_counts = {}
+        entity_idxs = {}
         cur.execute("""SELECT DISTINCT
             c.name AS collection, c.collection_id as collection_id,
             c1.name AS parent_class, c1.class_id AS parent_class_id,
@@ -113,16 +114,17 @@ def process_solution(zipfilename, h5filename=None):
             child_class, child_class_id) in cur.fetchall():
 
             if parent_class == "System":
-                dset, dset_name = create_object_dset(
+                dset, dset_name, dset_idxs = create_object_dset(
                     child_class, child_class_id,
                     cur2, objects_group)
 
             else:
-                dset, dset_name = create_relation_dset(
+                dset, dset_name, dset_idxs = create_relation_dset(
                     parent_class, collection, collection_id,
                     cur2, relations_group)
 
             print(len(dset), dset_name)
+            entity_idxs[dset_name] = dset_idxs
             entity_counts[dset_name] = len(dset)
 
         # Create HDF5 metadata datasets for time indices in each timescale/period
@@ -190,22 +192,13 @@ def process_solution(zipfilename, h5filename=None):
                  parent_name, child_name, prop_name,
                  period_type_id, phase_id, band_id, unit) = dataset[0]
 
-                # If index lookups bottleneck performance, maybe pre-generate
-                # hash tables during metadata creation
                 if parent_class == "System":
                     collection_name = object_dset_name(child_class)
-                    obj_idx = np.where(
-                        objects_group[collection_name]["name"] ==
-                        bytes(child_name, "UTF8"))[0][0]
+                    entity_idx = entity_idxs[collection_name][child_name]
 
                 else:
                     collection_name = relation_dset_name(parent_class, collection)
-                    obj_idx = np.where(
-                        (relations_group[collection_name]["parent"] ==
-                         bytes(parent_name, "UTF8")) &
-                        (relations_group[collection_name]["child"] ==
-                         bytes(child_name, "UTF8"))
-                    )[0][0]
+                    entity_idx = entity_idxs[collection_name][parent_name, child_name]
 
                 timescale = timescales[period_type_id]
                 phase = phases[phase_id]
@@ -228,7 +221,7 @@ def process_solution(zipfilename, h5filename=None):
                         compression="gzip", compression_opts=1)
                     dset.attrs['unit'] = unit
 
-                dset[obj_idx, :, band_id-1] = np.pad(
+                dset[entity_idx, :, band_id-1] = np.pad(
                     value_data, (0, n_timesteps-len(value_data)),
                     'constant', constant_values=np.nan)
                 num_read += length
