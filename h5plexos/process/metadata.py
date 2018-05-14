@@ -10,7 +10,29 @@ def relation_dset_name(parent_class, collection):
     return dset_name
 
 
-def create_object_dataset(class_name, class_id, cur, h5group):
+# Each period has its own way of storing time
+timescale_query_params = {
+    "interval": ("datetime", "period_0", "interval_id"),
+    "day": ("date", "period_1", "day_id"),
+    #TODO: Look up structure of week table
+    "month": ("month_beginning", "period_3", "month_id"),
+    "year": ("year_ending", "period_4", "fiscal_year_id"),
+}
+
+def create_time_dset(timescale, cur, h5group):
+
+    data_col, table_name, order_col = timescale_query_params[timescale]
+
+    cur.execute("SELECT %s FROM %s ORDER BY %s"%(
+        data_col, table_name, order_col))
+    data = [x[0].encode('utf8') for x in cur.fetchall()]
+    dset = h5group.create_dataset(timescale, data=data,
+        chunks=(len(data),), compression="gzip", compression_opts=1)
+
+    return dset, timescale
+
+
+def create_object_dset(class_name, class_id, cur, h5group):
 
     meta_dtype = np.dtype([
         ("name", "S64"),
@@ -35,7 +57,7 @@ def create_object_dataset(class_name, class_id, cur, h5group):
     return dset, dset_name
 
 
-def create_relation_dataset(parent_class, collection,
+def create_relation_dset(parent_class, collection,
                               collection_id, cur, h5group):
 
     relation_dtype = np.dtype([

@@ -11,8 +11,27 @@ import h5py
 import numpy as np
 
 from . import tempdb
-from .metadata import (create_object_dataset, object_dset_name,
-                       create_relation_dataset, relation_dset_name)
+from .metadata import (create_time_dset,
+                       create_object_dset, object_dset_name,
+                       create_relation_dset, relation_dset_name)
+
+def period_name_to_num(period_name):
+    return int(period_name.replace("period_", ""))
+
+timescales = {
+    0: "interval",
+    1: "day",
+    2: "week",
+    3: "month",
+    4: "year"
+}
+
+phases = {
+    1: "LT",
+    2: "PASA",
+    3: "MT",
+    4: "ST"
+}
 
 def process_solution(zipfilename, h5filename=None):
     """Read in the plexos solution zipfile and save data to an hdf5 file
@@ -88,44 +107,29 @@ def process_solution(zipfilename, h5filename=None):
             child_class, child_class_id) in cur.fetchall():
 
             if parent_class == "System":
-                dset, dset_name = create_object_dataset(
-                    child_class, child_class_id, cur2, objects_group)
+                dset, dset_name = create_object_dset(
+                    child_class, child_class_id,
+                    cur2, objects_group)
 
             else:
-                dset, dset_name = create_relation_dataset(
-                    parent_class, collection, collection_id, cur2, relations_group)
+                dset, dset_name = create_relation_dset(
+                    parent_class, collection, collection_id,
+                    cur2, relations_group)
 
             print(len(dset), dset_name)
             object_counts[dset_name] = len(dset)
 
-        # Add time lists for each period.  Each period has its own way of storing time
+        # Create HDF5 metadata datasets for time indices in each timescale/period
         timestep_counts = {}
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' and name LIKE 'period_%'")
-        period_list = [x[0] for x in cur.fetchall()]
+        cur.execute("SELECT name FROM sqlite_master " +
+                    "WHERE type='table' and name LIKE 'period_%'")
 
-        if "period_0" in period_list:
-            cur.execute("SELECT datetime FROM period_0 ORDER BY interval_id")
-            times_group.create_dataset("period_0", data=[x[0].encode('utf8') for x in cur.fetchall()])
-            timestep_counts["period_0"] = len(times_group["period_0"])
-
-        if "period_1" in period_list:
-            cur.execute("SELECT date FROM period_1 ORDER BY day_id")
-            times_group.create_dataset("period_1", data=[x[0].encode('utf8') for x in cur.fetchall()])
-            timestep_counts["period_1"] = len(times_group["period_1"])
-
-        if "period_2" in period_list:
-            logging.warn("Period 2 not implemented yet")
-            # TODO: Find something with period 2
-
-        if "period_3" in period_list:
-            cur.execute("SELECT month_beginning FROM period_3 ORDER BY month_id")
-            times_group.create_dataset("period_3", data=[x[0].encode('utf8') for x in cur.fetchall()])
-            timestep_counts["period_3"] = len(times_group["period_3"])
-
-        if "period_4" in period_list:
-            cur.execute("SELECT year_ending FROM period_4 ORDER BY fiscal_year_id")
-            times_group.create_dataset("period_4", data=[x[0].encode('utf8') for x in cur.fetchall()])
-            timestep_counts["period_4"] = len(times_group["period_4"])
+        for (period_name,) in cur.fetchall():
+            period_num = period_name_to_num(period_name)
+            timescale = timescales[period_num]
+            dset, dset_name = create_time_dset(timescale, cur2, times_group)
+            print(len(dset), dset_name)
+            timestep_counts[dset_name] = len(dset)
 
         # Create Time lists for each phase, needed as the period to
         # interval data sometimes comes out dirty
@@ -135,9 +139,14 @@ def process_solution(zipfilename, h5filename=None):
             cur2.execute("""SELECT min(pe.datetime) FROM phase_%d p
                 INNER JOIN period_0 pe ON p.interval_id=pe.interval_id
                 GROUP BY p.period_id"""%(phase_id))
-            dat = [x[0].encode('utf8') for x in cur2.fetchall()]
-            times_group.create_dataset("phase_%d"%phase_id, data=dat)
-            timestep_counts["phase_%d"%phase_id] = len(times_group["period_4"])
+            data = [x[0].encode('utf8') for x in cur2.fetchall()]
+            phase = phases[phase_id]
+            dset = times_group.create_dataset(phase, data=data,
+                                              chunks=(len(data),),
+                                              compression="gzip",
+                                              compression_opts=1)
+            print(len(dset), phase)
+            timestep_counts[phase] = len(dset)
 
         # Add in the binary result data
         for period in range(5):
@@ -194,10 +203,12 @@ def process_solution(zipfilename, h5filename=None):
                          bytes(child_name, "UTF8"))
                     )[0][0]
 
-                period_name = 'period_%d'%period_type_id
-                phase_name = 'phase_%d'%phase_id
-                dataset_path = '/'.join([dset_name, prop_name, period_name, phase_name])
-                n_timesteps = timestep_counts[period_name]
+                timescale = timescales[period_type_id]
+                phase = phases[phase_id]
+                # period_name = 'period_%d'%period_type_id
+                # phase_name = 'phase_%d'%phase_id
+                dataset_path = '/'.join([dset_name, prop_name, timescale, phase])
+                n_timesteps = timestep_counts[timescale]
 
                 if is_multi_band == "true":
                     dataset_path = dataset_path + '/band_%d'%band_id

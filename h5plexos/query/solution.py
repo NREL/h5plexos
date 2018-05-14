@@ -43,8 +43,8 @@ class PLEXOSSolution:
     def query_objects(self, object_class, prop,
                      names=None, categories=None,
                      bands=None,
-                     timescale="period_0", timespan=None,
-                     phase="phase_4"):
+                     timescale="interval", timespan=None,
+                     phase="ST"):
 
         if not names:
             names = slice(None)
