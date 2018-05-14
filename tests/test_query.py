@@ -28,11 +28,11 @@ class TestPlexosQuerySolution(unittest.TestCase):
 
         with PLEXOSSolution(h5filename) as db:
 
-            result = db.query_objects("Lines", "Flow", names=["B1_B2"]).iloc[:24, 0]
+            result = db.query_objects("line", "Flow", names=["B1_B2"]).iloc[:24, 0]
             self.assertEqual(expected, list(result))
             self.assertEqual(list(expected_timestamps), list(result.index))
 
-            result = db.Lines("Flow", names=["B1_B2"]).iloc[:24, 0]
+            result = db.line("Flow", names=["B1_B2"]).iloc[:24, 0]
             self.assertEqual(expected, list(result))
             self.assertEqual(list(expected_timestamps), list(result.index))
 

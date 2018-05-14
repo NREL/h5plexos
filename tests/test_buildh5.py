@@ -35,9 +35,9 @@ class TestPlexosProcessSolution(unittest.TestCase):
                     -1.98446034625, -1.9687104047500001, -2.1013393862500007,
                     -2.4032077540000008, -2.3716624119999983, -2.0844381467499993,
                     -1.7796791724999996, -1.4374390120000011, -1.1613561009999995]
-        idx = np.where(h5file["/metadata/objects/Lines"]["name"] ==
+        idx = np.where(h5file["/metadata/objects/line"]["name"] ==
                        bytes("B1_B2", "UTF8"))[0][0]
-        self.assertEqual(expected, list(h5file["/data/Lines/Flow/period_0/phase_4"][idx,:24]))
+        self.assertEqual(expected, list(h5file["/data/line/Flow/period_0/phase_4"][idx,:24]))
         h5file.close()
         os.remove(h5filename)
 
@@ -58,6 +58,6 @@ class TestPlexosProcessSolution(unittest.TestCase):
         """
         h5filename = "tests/mda_output_times.hdf5"
         h5file = process_solution("tests/mda_output.zip", h5filename)
-        self.assertEqual("kV", h5file['data/Nodes/Voltage/period_0/phase_4'].attrs["unit"])
+        self.assertEqual("kV", h5file['data/node/Voltage/period_0/phase_4'].attrs["unit"])
         h5file.close()
         os.remove(h5filename)

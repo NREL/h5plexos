@@ -1,6 +1,16 @@
 import numpy as np
 
-def create_object_dataset(collection, class_id, cur, h5group):
+def object_dset_name(child_class):
+    return child_class.lower()
+
+
+def relation_dset_name(parent_class, collection):
+    collection = collection.replace(" ", "")
+    dset_name = "_".join([parent_class, collection]).lower()
+    return dset_name
+
+
+def create_object_dataset(class_name, class_id, cur, h5group):
 
     meta_dtype = np.dtype([
         ("name", "S64"),
@@ -16,15 +26,16 @@ def create_object_dataset(collection, class_id, cur, h5group):
     # Or at least throw a warning if truncation happens?
     data = np.array([row for row in cur.fetchall()], dtype=meta_dtype)
 
+    dset_name = object_dset_name(class_name)
     dset = h5group.create_dataset(
-        collection, data=data,
+        dset_name, data=data,
         compression="gzip", compression_opts=1
     )
 
-    return dset, collection
+    return dset, dset_name
 
 
-def create_collection_dataset(parent_class, collection,
+def create_relation_dataset(parent_class, collection,
                               collection_id, cur, h5group):
 
     relation_dtype = np.dtype([
@@ -41,7 +52,7 @@ def create_collection_dataset(parent_class, collection,
 
     data = np.array([row for row in cur.fetchall()], dtype=relation_dtype)
 
-    dset_name = ".".join([parent_class, collection])
+    dset_name = relation_dset_name(parent_class, collection)
     dset = h5group.create_dataset(dset_name,
         data=data, compression="gzip", compression_opts=1)
 
