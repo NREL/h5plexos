@@ -56,12 +56,17 @@ from h5plexos.query import PLEXOSSolution
 
 with PLEXOSSolution("PLEXOS_Solution.h5") as db:
 
-    lineflow = db.line("Flow") # Flow data for all lines
-    regionload = db.region("Load", names=["CAISO", "ERCOT"]) # Load for CAISO and ERCOT regions
-    vggeneration = db.generator("Generation", categories=["PV", "Wind"]) # Generation for units in the PV and Wind categories
+    # Flow data for all lines
+    lineflow = db.line("Flow")
 
+
+	# Load for CAISO and ERCOT regions
+	regionload = db.region("Load", names=["CAISO", "ERCOT"])
+
+	# Generation for units in the PV and Wind categories
+    vggeneration = db.generator("Generation", categories=["PV", "Wind"])
 ```
 
-Queries return values in a Pandas series with a `MultiIndex` describing object category, object name, property name, timestamp, and value band. The series can be easily [unstacked](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.unstack.html) to create a dataframe organized with columns of your choosing (e.g. object category + name).
+Queries return values in a Pandas series with a `MultiIndex` describing object category, object name, property name, timestamp, and value band. The standard Pandas tools can then be used for [aggregation](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.groupby.html), [unstacking](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.unstack.html), etc.
 
 Querying membership properties (e.g. generator-level reserve provisions) and filtering queries on other object relations (generators in a region, lines attached to a particular node, etc) is theoretically possible given the data stored in the HDF5 file, but not currently supported by the query API. Stay tuned!
