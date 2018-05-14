@@ -22,19 +22,19 @@ class TestPlexosQuerySolution(unittest.TestCase):
                     -1.98446034625, -1.9687104047500001, -2.1013393862500007,
                     -2.4032077540000008, -2.3716624119999983, -2.0844381467499993,
                     -1.7796791724999996, -1.4374390120000011, -1.1613561009999995]
-        expected_timestamps = pd.DatetimeIndex(start="16/04/2020 00:00:00",
+        expected_timestamps = list(pd.DatetimeIndex(start="16/04/2020 00:00:00",
                                                end="16/04/2020 23:00:00",
-                                               freq="H")
+                                               freq="H"))
 
         with PLEXOSSolution(h5filename) as db:
 
-            result = db.query_objects("Lines", "Flow", names=["B1_B2"]).iloc[:24, 0]
+            result = db.query_objects("line", "Flow", names=["B1_B2"]).iloc[:24]
             self.assertEqual(expected, list(result))
-            self.assertEqual(list(expected_timestamps), list(result.index))
+            self.assertEqual(expected_timestamps, [x[3] for x in result.index])
 
-            result = db.Lines("Flow", names=["B1_B2"]).iloc[:24, 0]
+            result = db.line("Flow", names=["B1_B2"]).iloc[:24]
             self.assertEqual(expected, list(result))
-            self.assertEqual(list(expected_timestamps), list(result.index))
+            self.assertEqual(expected_timestamps, [x[3] for x in result.index])
 
         os.remove(h5filename)
 
