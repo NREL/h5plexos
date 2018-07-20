@@ -87,7 +87,7 @@ with PLEXOSSolution("PLEXOS_Solution.h5") as db:
     coal_offtakes = db.generator_fuels("Offtake", parents=["Generator_7", "CoalPlant123"], children=["Coal"])
 
     # Provisions of any reserve from any generator
-    all_gen_provisions = db.reserve_provisions("Provision")
+    all_gen_provisions = db.reserve_generators("Provision")
 
     # Reserve provisions from a particular set of generators
     gen_provisions = db.reserve_generators("Provision", children=["Generator_1", "Generator_5"])
