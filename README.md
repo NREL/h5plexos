@@ -80,17 +80,17 @@ from h5plexos.query import PLEXOSSolution
 
 with PLEXOSSolution("PLEXOS_Solution.h5") as db:
 
-	# Natural gas offtakes for all (relevant) generators
-	ng_offtakes = db.generator_fuels("Offtake", children=["Natural Gas"])
+    # Natural gas offtakes for all (relevant) generators
+    ng_offtakes = db.generator_fuels("Offtake", children=["Natural Gas"])
 
-	# Coal offtakes for specific generators
-	coal_offtakes = db.generator_fuels("Offtake", parents=["Generator_7", "CoalPlant123"], children=["Coal"])
+    # Coal offtakes for specific generators
+    coal_offtakes = db.generator_fuels("Offtake", parents=["Generator_7", "CoalPlant123"], children=["Coal"])
 
     # Provisions of any reserve from any generator
-    vggeneration = db.reserve_provisions("Provision")
+    all_gen_provisions = db.reserve_provisions("Provision")
 
     # Reserve provisions from a particular set of generators
-	gen_provisions = db.reserve_generators("Provision", children=["Generator_1", "Generator_5"])
+    gen_provisions = db.reserve_generators("Provision", children=["Generator_1", "Generator_5"])
 
 ```
 
@@ -109,9 +109,9 @@ from h5plexos.query import PLEXOSSolution
 with PLEXOSSolution("PLEXOS_Solution.h5") as db:
 
     # List of all generators
-	db.objects["generators"]
+    db.objects["generators"]
 
-	# Generators by region
+    # Generators by region
     db.relations["region_generators"]
 
 ```
