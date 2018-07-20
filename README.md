@@ -67,6 +67,51 @@ with PLEXOSSolution("PLEXOS_Solution.h5") as db:
 
 ```
 
-Queries return values in a Pandas series with a `MultiIndex` describing object category, object name, property name, timestamp, and value band. The standard Pandas tools can then be used for [aggregation](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.groupby.html), [unstacking](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.unstack.html), etc.
+Queries return values in a Pandas series with a `MultiIndex` describing object
+category, object name, property name, timestamp, and value band.
+The standard Pandas tools can then be used for
+[aggregation](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.groupby.html), [unstacking](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.unstack.html), etc.
 
-Querying membership properties (e.g. generator-level reserve provisions) and filtering queries on other object relations (generators in a region, lines attached to a particular node, etc) is theoretically possible given the data stored in the HDF5 file, but not currently supported by the query API. Stay tuned!
+Relationship properties can be queried in the same way, filtering on either
+the parent or child objects:
+
+```python
+from h5plexos.query import PLEXOSSolution
+
+with PLEXOSSolution("PLEXOS_Solution.h5") as db:
+
+	# Natural gas offtakes for all (relevant) generators
+	ng_offtakes = db.generator_fuels("Offtake", children=["Natural Gas"])
+
+	# Coal offtakes for specific generators
+	coal_offtakes = db.generator_fuels("Offtake", parents=["Generator_7", "CoalPlant123"], children=["Coal"])
+
+    # Provisions of any reserve from any generator
+    vggeneration = db.reserve_provisions("Provision")
+
+    # Reserve provisions from a particular set of generators
+	gen_provisions = db.reserve_generators("Provision", children=["Generator_1", "Generator_5"])
+
+```
+
+Object lists are available in the `db.objects` dictionary, while
+relations (direct memberships as well as some extra convenience relations)
+between objects are stored in the `db.relations` dictionary. These data can be
+combined together with standard Pandas
+[join](https://pandas.pydata.org/pandas-docs/stable/merging.html#database-style-dataframe-joining-merging)
+functionalities to filter datasets (i.e. by determining the object names to query)
+based on particular criteria (generators in a region, lines attached to a
+particular node, etc).
+
+```python
+from h5plexos.query import PLEXOSSolution
+
+with PLEXOSSolution("PLEXOS_Solution.h5") as db:
+
+    # List of all generators
+	db.objects["generators"]
+
+	# Generators by region
+    db.relations["region_generators"]
+
+```
