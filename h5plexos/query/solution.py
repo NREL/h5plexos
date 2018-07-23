@@ -1,4 +1,5 @@
 import h5py
+import numpy as np
 import pandas as pd
 
 # We can probably do better
@@ -15,7 +16,7 @@ class PLEXOSSolution:
             idx = pd.MultiIndex.from_tuples(
                 [(d[1].decode("UTF8"), d[0].decode("UTF8")) for d in dset],
                 names = ["category", "name"])
-            self.objects[name] = pd.Series(range(len(idx)), index=idx)
+            self.objects[name] = pd.Series(range(len(idx)), index=idx).sort_index()
 
         self.timestamps = {}
         for name, dset in self.h5file["/metadata/times"].items():
@@ -53,7 +54,7 @@ class PLEXOSSolution:
 
         dset = self.h5file[data_path]
         n_bands = dset.shape[2]
-        data = dset[obj_lookup.values, timespan, :]
+        data = dset[np.sort(obj_lookup.values), timespan, :]
 
         # Multiindex on category, name, property, time, band
         # TODO: Something cleaner than this!
