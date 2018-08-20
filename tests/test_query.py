@@ -11,29 +11,49 @@ class TestPlexosQuerySolution(unittest.TestCase):
         """Verify object values are available
         """
 
-        h5filename = "tests/mda_output_values.h5"
-        process_solution("tests/mda_output.zip", h5filename)
+        h5filename = "tests/RTS_DA.h5"
+        process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
 
-        expected = [-0.935319116500001, -0.6970154267499986, -0.5217735017499989,
-                    -0.41615258650000153, -0.3980630747500005, -0.46516376499999984,
-                    -0.7597340485000006, -1.2800584555000007, -1.812169899250002,
-                    -2.0393797997500016, -2.1432084820000004, -2.20546277575,
-                    -2.2587450190000005, -2.15386336825, -2.0509797174999984,
-                    -1.98446034625, -1.9687104047500001, -2.1013393862500007,
-                    -2.4032077540000008, -2.3716624119999983, -2.0844381467499993,
-                    -1.7796791724999996, -1.4374390120000011, -1.1613561009999995]
-        expected_timestamps = list(pd.DatetimeIndex(start="16/04/2020 00:00:00",
-                                               end="16/04/2020 23:00:00",
+        expected_timestamps = list(pd.DatetimeIndex(start="1/1/2020 00:00:00",
+                                               end="1/1/2020 23:00:00",
                                                freq="H"))
+
+        expected_flow = [-330.197431834115, -332.389888001791, -334.860066230212,
+                         -334.794115561143, -339.795973724878, -368.928288297157,
+                         -308.155615860858, -282.568408516569, -265.123568756352,
+                         -224.586887604017, -162.915840602681, -131.667018544265,
+                         -127.29943543624, -108.499125476666, -37.5693788753338,
+                         -42.3496225987148, 54.084407447253, -62.1597519929606,
+                         -72.7661568218603, -79.917583594192, -146.889373743392,
+                         -197.581977296408, -289.342389741395, -229.896443712577]
+
+        expected_offtake = [398.1, 398.1, 398.1, 398.1, 398.1, 398.1,
+                            755.2398, 398.1, 398.1, 398.1, 398.1, 398.1,
+                            398.1, 637.658136350009, 755.2398, 755.2398, 755.2398, 755.2398,
+                            755.2398, 755.2398, 755.2398, 755.2398, 755.2398, 755.2398]
 
         with PLEXOSSolution(h5filename) as db:
 
-            result = db.query_objects("line", "Flow", names=["B1_B2"]).iloc[:24]
-            self.assertEqual(expected, list(result))
+            # Test line flows
+
+            result = db.query_object_property("line", "Flow", names=["A27"]).iloc[:24]
+            self.assertTrue(np.isclose(expected_flow, list(result)).all())
             self.assertEqual(expected_timestamps, [x[3] for x in result.index])
 
-            result = db.line("Flow", names=["B1_B2"]).iloc[:24]
-            self.assertEqual(expected, list(result))
+            result = db.line("Flow", names=["A27"]).iloc[:24]
+            self.assertTrue(np.isclose(expected_flow, list(result)).all())
+            self.assertEqual(expected_timestamps, [x[3] for x in result.index])
+
+            # Test generator fuel offtake
+
+            result = db.query_relation_property(
+                "generator_fuels", "Offtake", parents=["101_STEAM_3"], children=["Coal"]).iloc[:24]
+            self.assertTrue(np.isclose(expected_offtake, list(result)).all())
+            self.assertEqual(expected_timestamps, [x[3] for x in result.index])
+
+            result = db.generator_fuels(
+                "Offtake", parents=["101_STEAM_3"], children=["Coal"]).iloc[:24]
+            self.assertTrue(np.isclose(expected_offtake, list(result)).all())
             self.assertEqual(expected_timestamps, [x[3] for x in result.index])
 
         os.remove(h5filename)
