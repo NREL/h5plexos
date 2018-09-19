@@ -90,7 +90,7 @@ class PLEXOSSolution:
         #TODO: Time slicing still not supported
         timespan = slice(None)
 
-        relation_lookup = self.relations[relation].loc[(parents, children),]
+        relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, relation, prop])
 
         dset = self.h5file[data_path]
@@ -108,4 +108,4 @@ class PLEXOSSolution:
             [(c, n, p, t, b) for ((c, n), p, t, b) in idx],
             names=["parent", "child", "property", "timestamp", "band"])
 
-        return pd.Series(data=data.reshape(-1), index=idx)
+        return pd.Series(data=data.reshape(-1), index=idx).sort_index()
