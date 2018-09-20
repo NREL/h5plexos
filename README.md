@@ -36,12 +36,12 @@ You'll need the `pandas` and `h5py` packages installed as well.
 
 ## PLEXOS Zipfile Processing
 
-With the package installed as detailed above, processing a solution file is as simple as:
+With the package installed in the current environment as detailed above,
+processing a solution file is as simple as:
 
 ```sh
 h5plexos PLEXOS_Solution.zip # Saves out to PLEXOS_Solution.h5
 ```
-
 
 The processor can also be called from a Python script:
 
