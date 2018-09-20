@@ -4,5 +4,5 @@ dependencies:
   - numpy
   - h5py
   - pandas
-pip:
-  - https://github.nrel.gov/PCM/h5plexos/archive/master.zip
+  - pip:
+      - https://github.nrel.gov/PCM/h5plexos/archive/master.zip
