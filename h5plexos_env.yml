@@ -1,6 +1,7 @@
 name: h5plexos
 dependencies:
   - python=3
+  - cython
   - numpy
   - h5py
   - pandas
