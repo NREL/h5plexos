@@ -27,7 +27,7 @@ class PLEXOSSolution:
 
         self.timestamps = {}
         for name, dset in self.h5file["/metadata/times"].items():
-            self.timestamps[name] = pd.DatetimeIndex([d.decode("UTF8") for d in dset])
+            self.timestamps[name] = pd.DatetimeIndex([d.decode("UTF8") for d in dset], dayfirst=True)
 
 
     def close(self):
@@ -62,12 +62,12 @@ class PLEXOSSolution:
         #TODO: Time slicing still not supported
         timespan = slice(None)
 
-        obj_lookup = self.objects[object_class].loc[(categories, names),]
+        obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
 
         dset = self.h5file[data_path]
         n_bands = dset.shape[2]
-        data = dset[np.sort(obj_lookup.values), timespan, :]
+        data = dset[obj_lookup.values, timespan, :]
 
         # Multiindex on category, name, property, time, band
         idx = pd.MultiIndex.from_product(
@@ -80,7 +80,7 @@ class PLEXOSSolution:
             [(c, n, p, t, b) for ((c, n), p, t, b) in idx],
             names=["category", "name", "property", "timestamp", "band"])
 
-        return pd.Series(data=data.reshape(-1), index=idx)
+        return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
 
     def query_relation_property(
             self, relation, prop,
@@ -90,7 +90,7 @@ class PLEXOSSolution:
         #TODO: Time slicing still not supported
         timespan = slice(None)
 
-        relation_lookup = self.relations[relation].loc[(parents, children),]
+        relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, relation, prop])
 
         dset = self.h5file[data_path]
@@ -108,4 +108,4 @@ class PLEXOSSolution:
             [(c, n, p, t, b) for ((c, n), p, t, b) in idx],
             names=["parent", "child", "property", "timestamp", "band"])
 
-        return pd.Series(data=data.reshape(-1), index=idx)
+        return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
