@@ -80,7 +80,7 @@ class PLEXOSSolution:
             [(c, n, p, t, b) for ((c, n), p, t, b) in idx],
             names=["category", "name", "property", "timestamp", "band"])
 
-        return pd.Series(data=data.reshape(-1), index=idx).sort_index()
+        return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
 
     def query_relation_property(
             self, relation, prop,
@@ -108,4 +108,4 @@ class PLEXOSSolution:
             [(c, n, p, t, b) for ((c, n), p, t, b) in idx],
             names=["parent", "child", "property", "timestamp", "band"])
 
-        return pd.Series(data=data.reshape(-1), index=idx).sort_index()
+        return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
