@@ -1,5 +1,8 @@
 name: h5plexos
 dependencies:
   - python=3
+  - numpy
   - h5py
-
+  - pandas
+pip:
+  - https://github.nrel.gov/PCM/h5plexos/archive/master.zip
