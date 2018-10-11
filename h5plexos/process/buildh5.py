@@ -33,13 +33,15 @@ phases = {
     4: "ST"
 }
 
-def process_solution(zipfilename, h5filename=None):
+def process_solution(zipfilename, h5filename=None, verbose=False):
     """Read in the plexos solution zipfile and save data to an hdf5 file
 
     Args:
         zipfilename - string name for zipfile
         h5filename - string name for h5file to write to, will be overwritten if
             exists.  If None, use the base zipfilename with h5 suffix
+        verbose - boolean specifying whether or not to show information on
+            processed file. Defaults to False.
 
     Returns:
         h5py.File
@@ -123,7 +125,7 @@ def process_solution(zipfilename, h5filename=None):
                     parent_class, collection, collection_id,
                     cur2, relations_group)
 
-            print(len(dset), dset_name)
+            print(len(dset), dset_name) if verbose else None
             entity_idxs[dset_name] = dset_idxs
             entity_counts[dset_name] = len(dset)
 
@@ -135,7 +137,7 @@ def process_solution(zipfilename, h5filename=None):
             period_num = period_name_to_num(period_name)
             timescale = timescales[period_num]
             dset, dset_name = create_time_dset(timescale, cur2, times_group)
-            print(len(dset), dset_name)
+            print(len(dset), dset_name) if verbose else None
             timestep_counts[dset_name] = len(dset)
 
         # Create Time lists for each phase, needed as the period to
@@ -152,7 +154,7 @@ def process_solution(zipfilename, h5filename=None):
                                               chunks=(len(data),),
                                               compression="gzip",
                                               compression_opts=1)
-            print(len(dset), phase)
+            print(len(dset), phase) if verbose else None
             timestep_counts[phase] = len(dset)
 
         # Add in the binary result data

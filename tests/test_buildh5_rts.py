@@ -14,13 +14,13 @@ class TestPlexosProcessSolution(unittest.TestCase):
 
         # Was data loaded?
         times = h5file['/metadata/times/interval']
-        self.assertEqual(b"16/04/2020 00:00:00", times[0])
-        self.assertEqual(b"17/04/2020 23:00:00", times[47])
+        self.assertEqual(b"01/01/2020 00:00:00", times[0])
+        self.assertEqual(b"02/01/2020 23:00:00", times[47])
 
         # Was the phase interval->period done correctly?
         phase_times = h5file['/metadata/times/ST']
-        self.assertEqual(b"16/04/2020 00:00:00", phase_times[0])
-        self.assertEqual(b"17/04/2020 23:00:00", phase_times[47])
+        self.assertEqual(b"01/01/2020 00:00:00", phase_times[0])
+        self.assertEqual(b"02/01/2020 23:00:00", phase_times[47])
         h5file.close()
         os.remove(h5filename)
 
@@ -29,17 +29,19 @@ class TestPlexosProcessSolution(unittest.TestCase):
         """
         h5filename = "tests/RTS_DA_objects.hdf5"
         h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
-        expected = [-0.935319116500001, -0.6970154267499986, -0.5217735017499989,
-                    -0.41615258650000153, -0.3980630747500005, -0.46516376499999984,
-                    -0.7597340485000006, -1.2800584555000007, -1.812169899250002,
-                    -2.0393797997500016, -2.1432084820000004, -2.20546277575,
-                    -2.2587450190000005, -2.15386336825, -2.0509797174999984,
-                    -1.98446034625, -1.9687104047500001, -2.1013393862500007,
-                    -2.4032077540000008, -2.3716624119999983, -2.0844381467499993,
-                    -1.7796791724999996, -1.4374390120000011, -1.1613561009999995]
+        expected = np.array(
+            [28.8742192841606, 29.2507825525972, 27.5952142765667,
+             21.9715405175445, 7.98968935072566, -3.84725642745148,
+             1.85503631499546, 5.07103646862386, 14.9091253711748,
+             16.7898373291084, 12.3500587495798, 14.0178266329467,
+             15.3848278766994, 22.8098348077484, 20.2177700376444,
+             8.27787285160804, -13.7586901465986, 6.0633617651001,
+             6.35689451038861, 8.8109582959243, 24.1764745175945,
+             22.6143140432123, 36.1641235074314, 36.3852069384884])
+
         idx = np.where(h5file["/metadata/objects/line"]["name"] ==
-                       bytes("B1_B2", "UTF8"))[0][0]
-        self.assertEqual(expected, list(h5file["/data/ST/interval/line/Flow"][idx,:24]))
+                       bytes("AB1", "UTF8"))[0][0]
+        np.testing.assert_allclose(h5file["/data/ST/interval/line/Flow"][idx,:24].ravel(), expected)
         h5file.close()
         os.remove(h5filename)
 
@@ -48,14 +50,14 @@ class TestPlexosProcessSolution(unittest.TestCase):
         """
         h5filename = "tests/RTS_DA_times.hdf5"
         h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
-        expected = [b"16/04/2020 %02d:00:00" % x for x in range(24)]
+        expected = [b"01/01/2020 %02d:00:00" % x for x in range(24)]
         # Phase 4 times span the entire range, although data is only output for
         # the first 24 items
         self.assertEqual(expected, list(h5file['/metadata/times/ST'][0:24]))
         h5file.close()
         os.remove(h5filename)
 
-    def test_object_unit(self):
+    def test_object_units(self):
         """Verify object property units are available
         """
         h5filename = "tests/RTS_DA_units.hdf5"
