@@ -131,15 +131,17 @@ def process_solution(zipfilename, h5filename=None, verbose=False):
 
         # Create HDF5 metadata datasets for time indices in each timescale/period
         timestep_counts = {}
-        cur.execute("SELECT name FROM sqlite_master " +
-                    "WHERE type='table' and name LIKE 'period_%'")
-        for (period_name,) in cur.fetchall():
-            period_num = period_name_to_num(period_name)
+        cur.execute(
+            "SELECT DISTINCT period_type_id, length, period_offset FROM key_index")
+        for (period_num, length, offset) in cur.fetchall():
             timescale = timescales[period_num]
-            dset, dset_name = create_time_dset(timescale, cur2, times_group)
+            dset, dset_name = create_time_dset(timescale, cur2, times_group,
+                                               int(length), int(offset))
             print(len(dset), dset_name) if verbose else None
             timestep_counts[dset_name] = len(dset)
 
+        # TODO: Probably want to get rid of this,
+        #       revisit once MT data is supported properly
         # Create Time lists for each phase, needed as the period to
         # interval data sometimes comes out dirty
         cur.execute("SELECT phase_id FROM key GROUP BY phase_id")
@@ -224,9 +226,7 @@ def process_solution(zipfilename, h5filename=None, verbose=False):
                         compression="gzip", compression_opts=1)
                     dset.attrs['unit'] = unit if period == 0 else summary_unit
 
-                dset[entity_idx, :, band_id-1] = np.pad(
-                    value_data, (0, n_timesteps-len(value_data)),
-                    'constant', constant_values=np.nan)
+                dset[entity_idx, :, band_id-1] = value_data
                 num_read += length
 
             logging.info("Read %s values", num_read)

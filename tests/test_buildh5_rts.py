@@ -4,11 +4,11 @@ import numpy as np
 from h5plexos.process import process_solution
 
 class TestPlexosProcessSolution(unittest.TestCase):
+    # New h5file for each test, as a failure will break tests run afterwards
 
     def test_process(self):
         """Verify the zip file is processed properly
         """
-        # New h5file for each test, as a failure will break tests run afterwards
         h5filename = "tests/RTS_DA.hdf5"
         h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
 
