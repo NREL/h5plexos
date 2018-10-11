@@ -9,13 +9,15 @@ class TestPlexosProcessSolution(unittest.TestCase):
         """Verify the zip file is processed properly
         """
         # New h5file for each test, as a failure will break tests run afterwards
-        h5filename = "tests/mda_output_process.hdf5"
-        h5file = process_solution("tests/mda_output.zip", h5filename)
-        # Was data loaded
+        h5filename = "tests/RTS_DA.hdf5"
+        h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
+
+        # Was data loaded?
         times = h5file['/metadata/times/interval']
         self.assertEqual(b"16/04/2020 00:00:00", times[0])
         self.assertEqual(b"17/04/2020 23:00:00", times[47])
-        # Was the phase interval->period done correctly
+
+        # Was the phase interval->period done correctly?
         phase_times = h5file['/metadata/times/ST']
         self.assertEqual(b"16/04/2020 00:00:00", phase_times[0])
         self.assertEqual(b"17/04/2020 23:00:00", phase_times[47])
@@ -25,8 +27,8 @@ class TestPlexosProcessSolution(unittest.TestCase):
     def test_object_values(self):
         """Verify object values are available
         """
-        h5filename = "tests/mda_output_values.hdf5"
-        h5file = process_solution("tests/mda_output.zip", h5filename)
+        h5filename = "tests/RTS_DA_objects.hdf5"
+        h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
         expected = [-0.935319116500001, -0.6970154267499986, -0.5217735017499989,
                     -0.41615258650000153, -0.3980630747500005, -0.46516376499999984,
                     -0.7597340485000006, -1.2800584555000007, -1.812169899250002,
@@ -44,8 +46,8 @@ class TestPlexosProcessSolution(unittest.TestCase):
     def test_object_times(self):
         """Verify object times are available
         """
-        h5filename = "tests/mda_output_times.hdf5"
-        h5file = process_solution("tests/mda_output.zip", h5filename)
+        h5filename = "tests/RTS_DA_times.hdf5"
+        h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
         expected = [b"16/04/2020 %02d:00:00" % x for x in range(24)]
         # Phase 4 times span the entire range, although data is only output for
         # the first 24 items
@@ -56,8 +58,11 @@ class TestPlexosProcessSolution(unittest.TestCase):
     def test_object_unit(self):
         """Verify object property units are available
         """
-        h5filename = "tests/mda_output_times.hdf5"
-        h5file = process_solution("tests/mda_output.zip", h5filename)
-        self.assertEqual("kV", h5file["data/ST/interval/node/Voltage"].attrs["unit"])
+        h5filename = "tests/RTS_DA_units.hdf5"
+        h5file = process_solution("tests/Model DAY_AHEAD Solution.zip", h5filename)
+        self.assertEqual("$/MWh", h5file["data/ST/interval/node/Price"].attrs["unit"])
+        self.assertEqual("MW", h5file["data/ST/interval/generator/Generation"].attrs["unit"])
+        self.assertEqual("GWh", h5file["data/ST/month/generator/Generation"].attrs["unit"])
         h5file.close()
         os.remove(h5filename)
+

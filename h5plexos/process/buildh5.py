@@ -178,7 +178,7 @@ def process_solution(zipfilename, h5filename=None):
 
                 cur2.execute("""SELECT parent_class, child_class, collection,
                     parent_name, child_name, prop_name,
-                    period_type_id, phase_id, band_id, unit
+                    period_type_id, phase_id, band_id, unit, summary_unit
                     FROM key_to_dataset
                     WHERE key_id=? AND period_type_id=?""", (row[0], period))
 
@@ -190,7 +190,8 @@ def process_solution(zipfilename, h5filename=None):
 
                 (parent_class, child_class, collection,
                  parent_name, child_name, prop_name,
-                 period_type_id, phase_id, band_id, unit) = dataset[0]
+                 period_type_id, phase_id, band_id,
+                 unit, summary_unit) = dataset[0]
 
                 if parent_class == "System":
                     collection_name = object_dset_name(child_class)
@@ -219,7 +220,7 @@ def process_solution(zipfilename, h5filename=None):
                         shape=(n_entities, n_timesteps, n_bands),
                         chunks=(1, n_timesteps, n_bands),
                         compression="gzip", compression_opts=1)
-                    dset.attrs['unit'] = unit
+                    dset.attrs['unit'] = unit if period == 0 else summary_unit
 
                 dset[entity_idx, :, band_id-1] = np.pad(
                     value_data, (0, n_timesteps-len(value_data)),

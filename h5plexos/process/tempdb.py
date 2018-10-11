@@ -255,14 +255,16 @@ def load(source, dbfilename=None, create_db_file=True, remove_invalid_chars=Fals
         co.name as collection,
         o1.name AS parent_name, o2.name AS child_name,
         p.name AS prop_name,
-        ki.period_type_id, k.phase_id, k.band_id, u.value AS unit
+        ki.period_type_id, k.phase_id, k.band_id,
+        u1.value AS unit, u2.value AS summary_unit
         FROM key k
         INNER JOIN key_index ki ON k.key_id=ki.key_id
         INNER JOIN membership m ON m.membership_id=k.membership_id
         INNER JOIN property p ON p.property_id=k.property_id
         INNER JOIN object o1 ON m.parent_object_id=o1.object_id
         INNER JOIN object o2 ON m.child_object_id=o2.object_id
-        INNER JOIN unit u ON p.unit_id=u.unit_id
+        INNER JOIN unit u1 ON p.unit_id=u1.unit_id
+        INNER JOIN unit u2 ON p.summary_unit_id=u2.unit_id
         INNER JOIN class c1 ON m.parent_class_id=c1.class_id
         INNER JOIN class c2 ON m.child_class_id=c2.class_id
         INNER JOIN collection co ON m.collection_id=co.collection_id""")
