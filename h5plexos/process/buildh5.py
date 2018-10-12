@@ -33,13 +33,15 @@ phases = {
     4: "ST"
 }
 
-def process_solution(zipfilename, h5filename=None):
+def process_solution(zipfilename, h5filename=None, verbose=False):
     """Read in the plexos solution zipfile and save data to an hdf5 file
 
     Args:
         zipfilename - string name for zipfile
         h5filename - string name for h5file to write to, will be overwritten if
             exists.  If None, use the base zipfilename with h5 suffix
+        verbose - boolean specifying whether or not to show information on
+            processed file. Defaults to False.
 
     Returns:
         h5py.File
@@ -123,21 +125,23 @@ def process_solution(zipfilename, h5filename=None):
                     parent_class, collection, collection_id,
                     cur2, relations_group)
 
-            print(len(dset), dset_name)
+            print(len(dset), dset_name) if verbose else None
             entity_idxs[dset_name] = dset_idxs
             entity_counts[dset_name] = len(dset)
 
         # Create HDF5 metadata datasets for time indices in each timescale/period
         timestep_counts = {}
-        cur.execute("SELECT name FROM sqlite_master " +
-                    "WHERE type='table' and name LIKE 'period_%'")
-        for (period_name,) in cur.fetchall():
-            period_num = period_name_to_num(period_name)
+        cur.execute(
+            "SELECT DISTINCT period_type_id, length, period_offset FROM key_index")
+        for (period_num, length, offset) in cur.fetchall():
             timescale = timescales[period_num]
-            dset, dset_name = create_time_dset(timescale, cur2, times_group)
-            print(len(dset), dset_name)
+            dset, dset_name = create_time_dset(timescale, cur2, times_group,
+                                               int(length), int(offset))
+            print(len(dset), dset_name) if verbose else None
             timestep_counts[dset_name] = len(dset)
 
+        # TODO: Probably want to get rid of this,
+        #       revisit once MT data is supported properly
         # Create Time lists for each phase, needed as the period to
         # interval data sometimes comes out dirty
         cur.execute("SELECT phase_id FROM key GROUP BY phase_id")
@@ -152,7 +156,7 @@ def process_solution(zipfilename, h5filename=None):
                                               chunks=(len(data),),
                                               compression="gzip",
                                               compression_opts=1)
-            print(len(dset), phase)
+            print(len(dset), phase) if verbose else None
             timestep_counts[phase] = len(dset)
 
         # Add in the binary result data
@@ -178,7 +182,7 @@ def process_solution(zipfilename, h5filename=None):
 
                 cur2.execute("""SELECT parent_class, child_class, collection,
                     parent_name, child_name, prop_name,
-                    period_type_id, phase_id, band_id, unit
+                    period_type_id, phase_id, band_id, unit, summary_unit
                     FROM key_to_dataset
                     WHERE key_id=? AND period_type_id=?""", (row[0], period))
 
@@ -190,7 +194,8 @@ def process_solution(zipfilename, h5filename=None):
 
                 (parent_class, child_class, collection,
                  parent_name, child_name, prop_name,
-                 period_type_id, phase_id, band_id, unit) = dataset[0]
+                 period_type_id, phase_id, band_id,
+                 unit, summary_unit) = dataset[0]
 
                 if parent_class == "System":
                     collection_name = object_dset_name(child_class)
@@ -219,11 +224,9 @@ def process_solution(zipfilename, h5filename=None):
                         shape=(n_entities, n_timesteps, n_bands),
                         chunks=(1, n_timesteps, n_bands),
                         compression="gzip", compression_opts=1)
-                    dset.attrs['unit'] = unit
+                    dset.attrs['unit'] = unit if period == 0 else summary_unit
 
-                dset[entity_idx, :, band_id-1] = np.pad(
-                    value_data, (0, n_timesteps-len(value_data)),
-                    'constant', constant_values=np.nan)
+                dset[entity_idx, :, band_id-1] = value_data
                 num_read += length
 
             logging.info("Read %s values", num_read)

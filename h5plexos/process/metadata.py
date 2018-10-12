@@ -10,24 +10,24 @@ def relation_dset_name(parent_class, collection):
     return dset_name
 
 
-# Each period has its own way of storing time
+# Each period has its own way of storing timestamps
 timescale_query_params = {
     "interval": ("datetime", "period_0", "interval_id"),
     "day": ("date", "period_1", "day_id"),
-    #TODO: Look up structure of week table
+    "week": ("week_ending", "period_2", "week_id"),
     "month": ("month_beginning", "period_3", "month_id"),
     "year": ("year_ending", "period_4", "fiscal_year_id"),
 }
 
-def create_time_dset(timescale, cur, h5group):
+def create_time_dset(timescale, cur, h5group, length, offset):
 
     data_col, table_name, order_col = timescale_query_params[timescale]
 
     cur.execute("SELECT %s FROM %s ORDER BY %s"%(
         data_col, table_name, order_col))
     data = [x[0].encode('utf8') for x in cur.fetchall()]
-    dset = h5group.create_dataset(timescale, data=data,
-        chunks=(len(data),), compression="gzip", compression_opts=1)
+    dset = h5group.create_dataset(timescale, data=data[offset:(offset+length)],
+        chunks=(length,), compression="gzip", compression_opts=1)
 
     return dset, timescale
 
