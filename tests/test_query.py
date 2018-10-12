@@ -7,7 +7,7 @@ from h5plexos.query import PLEXOSSolution
 
 class TestPlexosQuerySolution(unittest.TestCase):
 
-    def test_query_object_values(self):
+    def test_query_object_values_interval(self):
         """Verify object values are available
         """
 
@@ -55,6 +55,56 @@ class TestPlexosQuerySolution(unittest.TestCase):
                 "Offtake", parents=["101_STEAM_3"], children=["Coal"]).iloc[:24]
             self.assertTrue(np.isclose(expected_offtake, list(result)).all())
             self.assertEqual(expected_timestamps, [x[3] for x in result.index])
+
+        os.remove(h5filename)
+
+        h5filename = "tests/RTS_DA_h2.h5"
+        process_solution("tests/Model DAY_AHEAD_h2 Solution.zip", h5filename)
+
+        expected_generation = [
+            0, 0, 0, 0, 0, 8.8,
+            13.6, 15.6, 17.1, 17.1, 18.2, 18.5,
+            18.1, 16.8, 16.3, 14.2, 9.8, 4.4,
+            0, 0, 0, 0, 0, 0
+        ]
+
+        with PLEXOSSolution(h5filename) as db:
+
+            result = db.generator("Generation", names=["102_PV_1"]).xs(
+                slice("7/3/2020", "7/3/2020"), level="timestamp")
+            self.assertTrue(np.isclose(expected_generation, list(result)).all())
+
+            result = db.generator("Generation", categories=["Solar PV"]).xs(
+                ("102_PV_1", slice("7/3/2020", "7/3/2020")),
+                level=("name", "timestamp"))
+            self.assertTrue(np.isclose(expected_generation, list(result)).all())
+
+            result = db.generator("Generation").xs(
+                ("102_PV_1", slice("7/3/2020", "7/3/2020")),
+                level=("name", "timestamp"))
+            self.assertTrue(np.isclose(expected_generation, list(result)).all())
+
+        os.remove(h5filename)
+
+    def test_query_object_values_month(self):
+
+        h5filename = "tests/RTS_DA_h2.h5"
+        process_solution("tests/Model DAY_AHEAD_h2 Solution.zip", h5filename)
+
+        expected_generation = [
+            0, 0, 0, 0, 0, 0,
+            88.98564573773,
+            73.72927432927,
+            116.81835971605,
+            127.5698581023,
+            326.90425895285,
+            249.19300099602]
+
+        with PLEXOSSolution(h5filename) as db:
+
+            result = db.generator(
+                "Generation", names=["122_WIND_1"], timescale="month")
+            self.assertTrue(np.isclose(expected_generation, list(result)).all())
 
         os.remove(h5filename)
 
