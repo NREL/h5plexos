@@ -139,7 +139,9 @@ def process_solution(zipfilename, h5filename=None, verbose=False):
             timescale = timescales[period_num]
             dset, dset_name = create_time_dset(timescale, cur2, times_group,
                                                int(length), int(offset))
-            print(len(dset), dset_name) if verbose else None
+            if verbose:
+                print(len(dset), dset_name)
+
             timestep_counts[dset_name] = len(dset)
 
         # TODO: Probably want to get rid of this,
@@ -158,7 +160,9 @@ def process_solution(zipfilename, h5filename=None, verbose=False):
                                               chunks=(len(data),),
                                               compression="gzip",
                                               compression_opts=1)
-            print(len(dset), phase) if verbose else None
+            if verbose:
+                print(len(dset), phase)
+
             timestep_counts[phase] = len(dset)
 
         # Add in the binary result data
