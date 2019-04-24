@@ -125,7 +125,9 @@ def process_solution(zipfilename, h5filename=None, verbose=False):
                     parent_class, collection, collection_id,
                     cur2, relations_group)
 
-            print(len(dset), dset_name) if verbose else None
+            if verbose:
+                print(len(dset), dset_name)
+
             entity_idxs[dset_name] = dset_idxs
             entity_counts[dset_name] = len(dset)
 
