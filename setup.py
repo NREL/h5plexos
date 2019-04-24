@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='h5plexos',
-      version='0.4.2',
+      version='0.4.3',
       packages=['h5plexos',
                 'h5plexos.process',
                 'h5plexos.query'],
