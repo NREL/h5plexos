@@ -2,34 +2,44 @@
 
 HDF5 conversion scripts originally pulled out from https://github.nrel.gov/aces/plexos-coad
 
-Note: This package is functional, but a work in progress. The querying API and structure of the HDF5 output file are stabilizing but still subject to change.
+Note: This package is functional, but a work in progress. The querying API and
+structure of the HDF5 output file are stabilizing but still subject to change.
 
 ## Installation
 
-### Peregrine Easy-Installer
+### Pre-installed Eagle environment
 
-Running the following on Peregine will create a Conda environment that you can use to run `h5plexos`:
+If you're working on Eagle, NREL's HPC cluster, the quickest way to get started
+is to load the Eagle environment module:
 
 ```sh
-curl https://github.nrel.gov/raw/PCM/h5plexos/master/install_h5plexos_peregrine.sh | sh
+module use /home/gstephen/apps/modules
+module load h5plexos
 ```
 
-Once that's been done, load Peregrine's conda module and activate the
-newly-created environment before processing a PLEXOS solution
-as described below.
+This will automatically activate a Conda environment that provides the h5plexos
+Python package and command line tool (see below for usage).
+
+### Conda Environment File
+
+If you're using Conda for environment management but aren't on Eagle, you can
+use the `h5plexos_env.yml` file in this repository to create an h5plexos
+environment.
+Assuming you've saved `h5plexos_env.yml` to the current directory:
 
 ```sh
-module load conda
-source activate h5plexos
+conda env update -f h5plexos_env.yml
 ```
 
 ### Generic Installer
 
+A more general option is to manually install the package in your own Python
+environment, Conda-managed or otherwise.
 This repository's master branch zip archive is a functional pip installation
-package. You can install it directly from GitHub via `pip`:
+package, you can install it directly from GitHub via `pip`:
 
 ```sh
-pip install https://github.nrel.gov/PCM/h5plexos/archive/master.zip
+pip install https://github.com/NREL/h5plexos/archive/master.zip
 ```
 
 You'll need the `pandas` and `h5py` packages installed as well.

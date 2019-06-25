@@ -27,7 +27,8 @@ class PLEXOSSolution:
 
         self.timestamps = {}
         for name, dset in self.h5file["/metadata/times"].items():
-            self.timestamps[name] = pd.DatetimeIndex([d.decode("UTF8") for d in dset], dayfirst=True)
+            self.timestamps[name] = pd.to_datetime([d.decode("UTF8") for d in dset],
+                                                    format="%Y-%m-%dT%H:%M:%S")
 
 
     def close(self):

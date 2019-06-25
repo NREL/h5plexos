@@ -14,23 +14,23 @@ class TestPlexosProcessSolution(unittest.TestCase):
         h5file = process_solution("tests/Model DAY_AHEAD_h1 Solution.zip", h5filename)
 
         times = h5file['/metadata/times/interval']
-        self.assertEqual(b"01/01/2020 00:00:00", times[0])
-        self.assertEqual(b"02/01/2020 23:00:00", times[47])
+        self.assertEqual(b"2020-01-01T00:00:00", times[0])
+        self.assertEqual(b"2020-01-02T23:00:00", times[47])
 
         phase_times = h5file['/metadata/times/ST']
-        self.assertEqual(b"01/01/2020 00:00:00", phase_times[0])
-        self.assertEqual(b"02/01/2020 23:00:00", phase_times[47])
+        self.assertEqual(b"2020-01-01T00:00:00", phase_times[0])
+        self.assertEqual(b"2020-01-02T23:00:00", phase_times[47])
         h5file.close()
 
         h5file = process_solution("tests/Model DAY_AHEAD_h2 Solution.zip", h5filename)
 
         times = h5file['/metadata/times/interval']
-        self.assertEqual(b"01/07/2020 00:00:00", times[0])
-        self.assertEqual(b"02/07/2020 23:00:00", times[47])
+        self.assertEqual(b"2020-07-01T00:00:00", times[0])
+        self.assertEqual(b"2020-07-02T23:00:00", times[47])
 
         phase_times = h5file['/metadata/times/ST']
-        self.assertEqual(b"01/07/2020 00:00:00", phase_times[0])
-        self.assertEqual(b"02/07/2020 23:00:00", phase_times[47])
+        self.assertEqual(b"2020-07-01T00:00:00", phase_times[0])
+        self.assertEqual(b"2020-07-02T23:00:00", phase_times[47])
         h5file.close()
 
         os.remove(h5filename)
@@ -76,12 +76,12 @@ class TestPlexosProcessSolution(unittest.TestCase):
         h5filename = "tests/RTS_DA_times.hdf5"
 
         h5file = process_solution("tests/Model DAY_AHEAD_h1 Solution.zip", h5filename)
-        expected = [b"01/01/2020 %02d:00:00" % x for x in range(24)]
+        expected = [b"2020-01-01T%02d:00:00" % x for x in range(24)]
         self.assertEqual(expected, list(h5file['/metadata/times/ST'][0:24]))
         h5file.close()
 
         h5file = process_solution("tests/Model DAY_AHEAD_h2 Solution.zip", h5filename)
-        expected = [b"02/07/2020 %02d:00:00" % x for x in range(24)]
+        expected = [b"2020-07-02T%02d:00:00" % x for x in range(24)]
         self.assertEqual(expected, list(h5file['/metadata/times/ST'][24:48]))
         h5file.close()
 

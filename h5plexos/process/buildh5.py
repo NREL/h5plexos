@@ -9,6 +9,7 @@ from zipfile import ZipFile
 
 import h5py
 import numpy as np
+import pandas as pd
 
 from . import tempdb
 from .metadata import (create_time_dset,
@@ -150,16 +151,26 @@ def process_solution(zipfilename, h5filename=None, verbose=False):
         # interval data sometimes comes out dirty
         cur.execute("SELECT phase_id FROM key GROUP BY phase_id")
         for (phase_id,) in cur.fetchall():
-            logging.info("Creating time tables for phase %s", phase_id)
+
+            phase = phases[phase_id]
+            logging.info("Creating time tables for phase %s", phase)
+
             cur2.execute("""SELECT min(pe.datetime) FROM phase_%d p
                 INNER JOIN period_0 pe ON p.interval_id=pe.interval_id
                 GROUP BY p.period_id"""%(phase_id))
-            data = [x[0].encode('utf8') for x in cur2.fetchall()]
-            phase = phases[phase_id]
-            dset = times_group.create_dataset(phase, data=data,
-                                              chunks=(len(data),),
-                                              compression="gzip",
-                                              compression_opts=1)
+
+            # Piggy-back on pandas date format guessing
+            data = pd.to_datetime([x[0] for x in cur2.fetchall()],
+                dayfirst=True # WARNING: For some locales, dayfirst=True may not be correct...
+                ).strftime("%Y-%m-%dT%H:%M:%S")
+
+            dset = times_group.create_dataset(
+                phase,
+                data=[dt.encode("UTF8") for dt in data],
+                chunks=(len(data),),
+                compression="gzip",
+                compression_opts=1)
+
             if verbose:
                 print(len(dset), phase)
 

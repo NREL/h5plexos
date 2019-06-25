@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 def object_dset_name(child_class):
     return child_class.lower()
@@ -12,21 +13,32 @@ def relation_dset_name(parent_class, collection):
 
 # Each period has its own way of storing timestamps
 timescale_query_params = {
-    "interval": ("datetime", "period_0", "interval_id"),
-    "day": ("date", "period_1", "day_id"),
-    "week": ("week_ending", "period_2", "week_id"),
-    "month": ("month_beginning", "period_3", "month_id"),
-    "year": ("year_ending", "period_4", "fiscal_year_id"),
+    "interval": ("datetime", "period_0", "interval_id", False),
+    "day": ("date", "period_1", "day_id", False),
+    "week": ("week_ending", "period_2", "week_id", True),
+    "month": ("month_beginning", "period_3", "month_id", True),
+    "year": ("year_ending", "period_4", "fiscal_year_id", True),
 }
 
 def create_time_dset(timescale, cur, h5group, length, offset):
 
-    data_col, table_name, order_col = timescale_query_params[timescale]
+    data_col, table_name, order_col, strip_tz = timescale_query_params[timescale]
 
     cur.execute("SELECT %s FROM %s ORDER BY %s"%(
         data_col, table_name, order_col))
-    data = [x[0].encode('utf8') for x in cur.fetchall()]
-    dset = h5group.create_dataset(timescale, data=data[offset:(offset+length)],
+    data = [x[0] for x in cur.fetchall()]
+
+    if strip_tz:
+        data = [dt[:-6] for dt in data]
+
+    # Piggy-back on pandas date format guessing
+    data = pd.to_datetime(data[offset:(offset+length)],
+        dayfirst=True # WARNING: For some locales, dayfirst=True may not be correct...
+        ).strftime("%Y-%m-%dT%H:%M:%S")
+
+    dset = h5group.create_dataset(
+        timescale,
+        data=[dt.encode('utf8') for dt in data],
         chunks=(length,), compression="gzip", compression_opts=1)
 
     return dset, timescale
