@@ -27,8 +27,8 @@ class PLEXOSSolution:
 
         self.timestamps = {}
         for name, dset in self.h5file["/metadata/times"].items():
-            self.timestamps[name] = pd.to_datetime([d.decode("UTF8") for d in dset],
-                                                    format="%Y-%m-%dT%H:%M:%S")
+            self.timestamps[name] = pd.to_datetime(dset[:],
+                                                   format="%Y-%m-%dT%H:%M:%S")
 
 
     def close(self):
@@ -42,7 +42,7 @@ class PLEXOSSolution:
 
     def __getattr__(self, collection):
 
-        # TODO: Determine whether querying object or relation properties
+        # TODO: Somethting smarter to determine whether querying object or relation properties
         if "_" in collection:
             f = self.query_relation_property
         else:
@@ -58,23 +58,24 @@ class PLEXOSSolution:
     def query_object_property(
             self, object_class, prop,
             names=slice(None), categories=slice(None),
-            timescale="interval", timespan=slice(None), phase="ST"):
-
-        #TODO: Time slicing still not supported
-        timespan = slice(None)
+            timescale="intervals", phase="ST"):
 
         obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
 
         dset = self.h5file[data_path]
         n_bands = dset.shape[2]
-        data = dset[obj_lookup.values, timespan, :]
+        n_periods = dset.shape[1]
+        period_offset = dset.attrs["period_offset"]
+        data = dset[obj_lookup.values, :, :]
+
+        timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
 
         # Multiindex on category, name, property, time, band
         idx = pd.MultiIndex.from_product(
             [[x for x in obj_lookup.index], # List object categories and names
              [prop], # Report property (in preperation for multi-property queries)
-             self.timestamps[timescale], # List all timestamps (but eventually not)
+             timestamps, # List all timestamps in data range
              range(1, n_bands+1)] # List all bands
         )
         idx = pd.MultiIndex.from_tuples(
@@ -86,23 +87,24 @@ class PLEXOSSolution:
     def query_relation_property(
             self, relation, prop,
             parents=slice(None), children=slice(None),
-            timescale="interval", timespan=slice(None), phase="ST"):
-
-        #TODO: Time slicing still not supported
-        timespan = slice(None)
+            timescale="intervals", phase="ST"):
 
         relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, relation, prop])
 
         dset = self.h5file[data_path]
         n_bands = dset.shape[2]
-        data = dset[relation_lookup.values, timespan, :]
+        n_periods = dset.shape[3]
+        period_offset = dset.attrs["period_offset"]
+        data = dset[relation_lookup.values, :, :]
+
+        timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
 
         # Multiindex on parent, child, property, time, band
         idx = pd.MultiIndex.from_product(
             [[x for x in relation_lookup.index], # List object categories and names
              [prop], # Report property (in preperation for multi-property queries)
-             self.timestamps[timescale], # List all timestamps (but eventually not)
+             timestamps, # List all timestamps (but eventually not)
              range(1, n_bands+1)] # List all bands
         )
         idx = pd.MultiIndex.from_tuples(
