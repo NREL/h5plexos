@@ -1,15 +1,34 @@
 import h5py
 import numpy as np
 import pandas as pd
+import re
 
 # We can probably do better
 def issequence(x):
     return hasattr(x, '__iter__')
 
+version_rgx = re.compile("^v(\d+)\.(\d+)\.(\d+)$")
+
 class PLEXOSSolution:
 
     def __init__(self, h5filepath):
         self.h5file = h5py.File(h5filepath, "r")
+
+        self.versionstring = get(self.h5file.attrs, "h5plexos")
+        v = version_rgx.match(self.versionstring) if self.versionstring else None
+
+        if not v:
+            raise ValueError("Could not determine the file's H5PLEXOS " + \\
+                  "format version - this package version only reads " + \\
+                  "H5PLEXOS v0.6 files")
+
+        v = v.group(1,2,3)
+
+        if not ((0,6,0) <= v and v < (0,7,0)):
+            raise ValueError("H5PLEXOS " + self.versionstring + " files " + \\
+                             "are not supported - this package version " + \\
+                             "only reads H5PLEXOS v0.6 files")
+        self.version = v
 
         self.objects = {}
         for name, dset in self.h5file["/metadata/objects"].items():
@@ -58,7 +77,7 @@ class PLEXOSSolution:
     def query_object_property(
             self, object_class, prop,
             names=slice(None), categories=slice(None),
-            timescale="intervals", phase="ST"):
+            timescale="interval", phase="ST"):
 
         obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
