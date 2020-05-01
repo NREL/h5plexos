@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import re
+import time
 
 # We can probably do better
 def issequence(x):
@@ -15,29 +16,20 @@ class PLEXOSSolution:
         self.h5file = h5py.File(h5filepath, "r")
         
         self.versionstring = self.h5file.attrs.get("h5plexos")
-        
     
         if self.versionstring:
             self.versionstring = self.versionstring.decode("UTF8")
             v = version_rgx.match(self.versionstring)
             v = v.group(1,2,3)
         else: 
-            v = ('0','0','0')
+            v = ('0','5','0')
         
         
-        # if not v:
-        #     raise ValueError("Could not determine the file's H5PLEXOS " + \
-        #           "format version - this package version only reads " + \
-        #           "H5PLEXOS v0.6 files")
+        if (('0','6','0') <= v and v < ('0','7','0')):
+            print("Querying H5PLEXOS " + self.versionstring + " file")
+        else:
+            print("Querying H5PLEXOS v0.5.0 file")
         
-        # if v:
-        #     v = v.group(1,2,3)
-            
-        
-        # if not (('0','6','0') <= v and v < ('0','7','0')):
-        #     raise ValueError("H5PLEXOS " + self.versionstring + " files " + \
-        #                      "are not supported - this package version " + \
-        #                      "only reads H5PLEXOS v0.6 files")
         self.version = v
         
         
@@ -67,7 +59,6 @@ class PLEXOSSolution:
             for name, dset in self.h5file["/metadata/times"].items():
                 self.timestamps[name] = pd.to_datetime([d.decode("UTF8") for d in dset],
                                                     format="%Y-%m-%dT%H:%M:%S")
-
 
     def close(self):
         self.h5file.close()
@@ -119,12 +110,11 @@ class PLEXOSSolution:
                  range(1, n_bands+1)] # List all bands
             )
         else:
+            timespan = slice(None)
             obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
             data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
     
-            print(data_path)
             dset = self.h5file[data_path]
-            print(dset)
             n_bands = dset.shape[2]
             data = dset[obj_lookup.values, timespan, :]
 
@@ -146,7 +136,7 @@ class PLEXOSSolution:
     def query_relation_property(
             self, relation, prop,
             parents=slice(None), children=slice(None),
-            timescale="intervals", timespan=slice(None), phase="ST"):
+            timescale="interval", timespan=slice(None), phase="ST"):
            
         
         if (('0','6','0') <= self.version and self.version < ('0','7','0')):        
@@ -168,9 +158,9 @@ class PLEXOSSolution:
                  range(1, n_bands+1)] # List all bands
             )
         else:
+            timespan = slice(None)
             relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
             data_path = "/data/" + "/".join([phase, timescale, relation, prop])
-            print(data_path)
             dset = self.h5file[data_path]
             n_bands = dset.shape[2]
             data = dset[relation_lookup.values, timespan, :]
