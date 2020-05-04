@@ -2,7 +2,6 @@ import h5py
 import numpy as np
 import pandas as pd
 import re
-import time
 
 # We can probably do better
 def issequence(x):
@@ -21,10 +20,9 @@ class PLEXOSSolution:
             self.versionstring = self.versionstring.decode("UTF8")
             v = version_rgx.match(self.versionstring)
             v = v.group(1,2,3)
-            v = tuple([(int(i)) for i in v])
+            v = tuple(int(i) for i in v)
         else: 
             v = (0,5,0)
-        
         
         if ((0,6,0) <= v and v < (0,7,0)):
             print("Querying H5PLEXOS " + self.versionstring + " file")
@@ -83,99 +81,67 @@ class PLEXOSSolution:
         
         if ((0,6,0) <= self.version and self.version < (0,7,0)):
             object_class += "s"
-            obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
-            data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
-    
-            dset = self.h5file[data_path]
-            n_bands = dset.shape[2]
-            n_periods = dset.shape[1]
-            period_offset = dset.attrs["period_offset"]
-            data = dset[obj_lookup.values, :, :]
-    
-            timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
-            
-            # Multiindex on category, name, property, time, band
-            idx = pd.MultiIndex.from_product(
-                [obj_lookup.index.get_level_values(1), # List object categories and names
-                 [prop], # Report property (in preperation for multi-property queries)
-                 timestamps, # List all timestamps in data range
-                 range(1, n_bands+1)] # List all bands
-            )
-            cidx = pd.CategoricalIndex(obj_lookup.index.get_level_values(0))
-            cidx_codes = (cidx.codes.repeat(n_bands * len(timestamps)))
-            
-        else:
-            timespan = slice(None)
-            obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
-            data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
-    
-            dset = self.h5file[data_path]
-            n_bands = dset.shape[2]
-            data = dset[obj_lookup.values, timespan, :]
+        
+        obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
+        data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
 
-            
-            # Multiindex on category, name, property, time, band
-            idx = pd.MultiIndex.from_product(
-                [obj_lookup.index.get_level_values(1), 
-                 [prop], # Report property (in preperation for multi-property queries)
-                 self.timestamps[timescale],
-                 range(1, n_bands+1)] # List all bands
-            )
-            
-            cidx = pd.CategoricalIndex(obj_lookup.index.get_level_values(0))
-            cidx_codes = (cidx.codes.repeat(n_bands * len(self.timestamps[timescale])))
+        dset = self.h5file[data_path]
+        n_bands = dset.shape[2]
+        n_periods = dset.shape[1]
+        
+        data = dset[obj_lookup.values, :, :]
+        
+        if ((0,6,0) <= self.version and self.version < (0,7,0)):
+            period_offset = dset.attrs["period_offset"]
+            timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
+        else:
+            timestamps = self.timestamps[timescale]
+        
+        # Multiindex on category, name, property, time, band
+        idx = pd.MultiIndex.from_product(
+            [obj_lookup.index.get_level_values(1), # List object categories and names
+             [prop], # Report property (in preperation for multi-property queries)
+             timestamps, # List all timestamps in data range
+             range(1, n_bands+1)] # List all bands
+        )
+        cidx = pd.CategoricalIndex(obj_lookup.index.get_level_values(0))
+        cidx_codes = (cidx.codes.repeat(n_bands * len(timestamps)))
 
         idx = pd.MultiIndex(levels=[cidx.categories] + idx.levels, codes= [cidx_codes] + idx.codes,
                                 names=["category", "name", "property", "timestamp", "band"])
  
-            
         return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
         
-    
     def query_relation_property(
             self, relation, prop,
             parents=slice(None), children=slice(None),
             timescale="interval", timespan=slice(None), phase="ST"):
-                   
+            
+        relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
+        data_path = "/data/" + "/".join([phase, timescale, relation, prop])
+        dset = self.h5file[data_path]
+        n_bands = dset.shape[2]
+        n_periods = dset.shape[1]
+        
+        data = dset[relation_lookup.values, :, :]
+        
         if ((0,6,0) <= self.version and self.version < (0,7,0)):      
-            relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
-            data_path = "/data/" + "/".join([phase, timescale, relation, prop])
-            dset = self.h5file[data_path]
-            n_bands = dset.shape[2]
-            n_periods = dset.shape[1]
             period_offset = dset.attrs["period_offset"]
-            data = dset[relation_lookup.values, :, :]
-    
             timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
-    
-            # Multiindex on parent, child, property, time, band
-            idx = pd.MultiIndex.from_product(
-                [relation_lookup.index.get_level_values(1), # List object categories and names
-                 [prop], # Report property (in preperation for multi-property queries)
-                 timestamps, # List all timestamps (but eventually not)
-                 range(1, n_bands+1)] # List all bands
-            )
-            cidx = pd.CategoricalIndex(relation_lookup.index.get_level_values(0))
-            cidx_codes = (cidx.codes.repeat(n_bands * len(timestamps)))
-
         else:
-            timespan = slice(None)
-            relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
-            data_path = "/data/" + "/".join([phase, timescale, relation, prop])
-            dset = self.h5file[data_path]
-            n_bands = dset.shape[2]
-            data = dset[relation_lookup.values, timespan, :]
+            timestamps = self.timestamps[timescale]
     
-            # Multiindex on parent, child, property, time, band
-            idx = pd.MultiIndex.from_product(
-                [relation_lookup.index.get_level_values(1), # List object categories and names
-                 [prop], # Report property (in preperation for multi-property queries)
-                 self.timestamps[timescale], # List all timestamps (but eventually not)
-                 range(1, n_bands+1)] # List all bands
-            )
-            cidx = pd.CategoricalIndex(relation_lookup.index.get_level_values(0))
-            cidx_codes = (cidx.codes.repeat(n_bands * len(self.timestamps[timescale])))
+        # Multiindex on parent, child, property, time, band
+        idx = pd.MultiIndex.from_product(
+            [relation_lookup.index.get_level_values(1), # List object categories and names
+             [prop], # Report property (in preperation for multi-property queries)
+             timestamps, # List all timestamps (but eventually not)
+             range(1, n_bands+1)] # List all bands
+        )
+        cidx = pd.CategoricalIndex(relation_lookup.index.get_level_values(0))
+        cidx_codes = (cidx.codes.repeat(n_bands * len(timestamps)))
         
         idx = pd.MultiIndex(levels=[cidx.categories] + idx.levels, codes= [cidx_codes] + idx.codes,
             names=["parent", "child", "property", "timestamp", "band"])
+        
         return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
