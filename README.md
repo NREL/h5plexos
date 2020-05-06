@@ -1,70 +1,32 @@
 # H5PLEXOS
 
-HDF5 conversion scripts originally pulled out from https://github.nrel.gov/aces/plexos-coad
+This package provides a Python interface for reading HDF5 files with H5PLEXOS
+v0.5 and v0.6 formatting. To create v0.5 files, use a version of this package
+in the [0.5 series](https://github.com/NREL/h5plexos/releases). To create v0.6
+files, use H5PLEXOS.jl.
 
 Note: This package is functional, but a work in progress. The querying API and
-structure of the HDF5 output file are stabilizing but still subject to change.
+HDF5 file structure are stabilizing but still subject to change.
 
 ## Installation
 
-### Pre-installed Eagle environment
-
-If you're working on Eagle, NREL's HPC cluster, the quickest way to get started
-is to load the Eagle environment module:
-
-```sh
-module use /home/gstephen/apps/modules
-module load h5plexos
-```
-
-This will automatically activate a Conda environment that provides the h5plexos
-Python package and command line tool (see below for usage).
-
-### Conda Environment File
-
-If you're using Conda for environment management but aren't on Eagle, you can
-use the `h5plexos_env.yml` file in this repository to create an h5plexos
-environment.
-Assuming you've saved `h5plexos_env.yml` to the current directory:
-
-```sh
-conda env update -f h5plexos_env.yml
-```
-
-### Generic Installer
-
-A more general option is to manually install the package in your own Python
-environment, Conda-managed or otherwise.
-This repository's master branch zip archive is a functional pip installation
-package, you can install it directly from GitHub via `pip`:
+A zip archive of this repository is a functional pip installation
+package. For example, you can install the latest development version directly
+from GitHub via `pip`:
 
 ```sh
 pip install https://github.com/NREL/h5plexos/archive/master.zip
 ```
+You can also install a specific release by downloading the corresponding archive
+from the [releases page](https://github.com/NREL/h5plexos/releases).
 
 You'll need the `pandas` and `h5py` packages installed as well.
 
-## PLEXOS Zipfile Processing
+## Querying an H5PLEXOS HDF5 file
 
-With the package installed in the current environment as detailed above,
-processing a solution file is as simple as:
-
-```sh
-h5plexos PLEXOS_Solution.zip # Saves out to PLEXOS_Solution.h5
-```
-
-The processor can also be called from a Python script:
-
-```python
-from h5plexos.process import process_solution
-process_solution("PLEXOS_Solution.zip", "PLEXOS_Solution.h5") # Saves out to PLEXOS_Solution.h5
-```
-
-## Querying the HDF5 file
-
-Once the solution has been processed, the resulting file can be queried by
-object type and property name, with optional filtering by object name and
-category:
+Once a PLEXOS solution has been processed, the resulting HDF5 file can be
+queried by object type and property name, with optional filtering by object
+name and category:
 
 ```python
 from h5plexos.query import PLEXOSSolution
