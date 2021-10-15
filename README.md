@@ -104,6 +104,9 @@ from h5plexos.query import PLEXOSSolution
 
 with PLEXOSSolution("PLEXOS_Solution.h5") as db:
 
+    # Access non-ST block results by passing the `phase` keyword:
+    lt_capacity = db.generator("Installed Capacity", phase="LT")
+
     # LT solution interval->block mapping
     db.blocks["LT"]
 

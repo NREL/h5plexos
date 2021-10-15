@@ -96,6 +96,9 @@ class PLEXOSSolution:
         obj_lookup = self.objects[object_class].loc[(categories, names),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, object_class, prop])
 
+        if data_path not in self.h5file:
+            raise ValueError(data_path + " does not exist in the solution file")
+
         dset = self.h5file[data_path]
         n_bands = dset.shape[2]
         n_periods = dset.shape[1]
@@ -103,11 +106,18 @@ class PLEXOSSolution:
         data = dset[obj_lookup.values, :, :]
         
         if ((0,6,0) <= self.version and self.version < (0,7,0)):
-            period_offset = dset.attrs["period_offset"]
-            timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
+
+            if phase == "ST":
+                period_offset = dset.attrs["period_offset"]
+                timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
+                timename = "timestamp"
+            else:
+                timestamps = range(1, n_periods+1)
+                timename = "block"
         else:
             timestamps = self.timestamps[timescale]
-        
+            timename = "timestamp"
+
         # Multiindex on category, name, property, time, band
         idx = pd.MultiIndex.from_product(
             [obj_lookup.index.get_level_values(1), # List object categories and names
@@ -119,7 +129,7 @@ class PLEXOSSolution:
         cidx_codes = (cidx.codes.repeat(n_bands * len(timestamps)))
 
         idx = pd.MultiIndex(levels=[cidx.categories] + idx.levels, codes= [cidx_codes] + idx.codes,
-                                names=["category", "name", "property", "timestamp", "band"])
+                                names=["category", "name", "property", timename, "band"])
  
         return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
         
@@ -130,17 +140,29 @@ class PLEXOSSolution:
             
         relation_lookup = self.relations[relation].loc[(parents, children),].sort_values()
         data_path = "/data/" + "/".join([phase, timescale, relation, prop])
+
+        if data_path not in self.h5file:
+            raise ValueError(data_path + " does not exist in the solution file")
+
         dset = self.h5file[data_path]
         n_bands = dset.shape[2]
         n_periods = dset.shape[1]
         
         data = dset[relation_lookup.values, :, :]
         
-        if ((0,6,0) <= self.version and self.version < (0,7,0)):      
-            period_offset = dset.attrs["period_offset"]
-            timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
+        if ((0,6,0) <= self.version and self.version < (0,7,0)):
+
+            if phase == "ST":
+                period_offset = dset.attrs["period_offset"]
+                timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
+                timename = "timestamp"
+            else:
+                timestamps = range(1, n_periods+1)
+                timename = "block"
+
         else:
             timestamps = self.timestamps[timescale]
+            timename = "timestamp"
     
         # Multiindex on parent, child, property, time, band
         idx = pd.MultiIndex.from_product(
@@ -153,6 +175,6 @@ class PLEXOSSolution:
         cidx_codes = (cidx.codes.repeat(n_bands * len(timestamps)))
         
         idx = pd.MultiIndex(levels=[cidx.categories] + idx.levels, codes= [cidx_codes] + idx.codes,
-            names=["parent", "child", "property", "timestamp", "band"])
+            names=["parent", "child", "property", timename, "band"])
         
         return pd.Series(data=data.reshape(-1), index=idx).dropna().sort_index()
