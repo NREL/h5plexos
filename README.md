@@ -93,3 +93,18 @@ with PLEXOSSolution("PLEXOS_Solution.h5") as db:
     db.relations["region_generators"]
 
 ```
+
+In newer h5plexos files (file format v0.6.2 or above), there will also be a
+`db.blocks` dictionary of mappings from chronological time intervals to
+non-chronological time blocks. These mappings can be used to relate LT, PASA,
+and MT solution block results to periods in time.
+
+```python
+from h5plexos.query import PLEXOSSolution
+
+with PLEXOSSolution("PLEXOS_Solution.h5") as db:
+
+    # LT solution interval->block mapping
+    db.blocks["LT"]
+
+```

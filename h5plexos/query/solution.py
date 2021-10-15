@@ -49,7 +49,18 @@ class PLEXOSSolution:
         for name, dset in self.h5file["/metadata/times"].items():
             self.timestamps[name] = pd.to_datetime(dset[:].astype("U"),
                                                 format="%Y-%m-%dT%H:%M:%S")
-      
+
+        if self.version >= (0,6,2):
+            self.blocks = {}
+            for name, dset in self.h5file["/metadata/blocks"].items():
+                mapping = pd.Series(
+                    data=dset["block"],
+                    index=pd.to_datetime(dset["interval"].astype("U"),
+                                         format="%Y-%m-%dT%H:%M:%S"))
+                mapping.index.name = "interval"
+                mapping.name = "block"
+                self.blocks[name] = mapping
+
     def close(self):
         self.h5file.close()
 
