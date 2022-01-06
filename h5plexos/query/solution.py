@@ -104,17 +104,20 @@ class PLEXOSSolution:
         n_periods = dset.shape[1]
         
         data = dset[obj_lookup.values, :, :]
-        
+
         if ((0,6,0) <= self.version and self.version < (0,7,0)):
 
-            if phase == "ST":
+            if phase != "ST" and timescale == "interval":
+                timestamps = range(1, n_periods+1)
+                timename = "block"
+
+            else:
                 period_offset = dset.attrs["period_offset"]
                 timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
                 timename = "timestamp"
-            else:
-                timestamps = range(1, n_periods+1)
-                timename = "block"
+
         else:
+
             timestamps = self.timestamps[timescale]
             timename = "timestamp"
 
@@ -152,13 +155,14 @@ class PLEXOSSolution:
         
         if ((0,6,0) <= self.version and self.version < (0,7,0)):
 
-            if phase == "ST":
+            if phase != "ST" and timescale == "interval":
+                timestamps = range(1, n_periods+1)
+                timename = "block"
+
+            else:
                 period_offset = dset.attrs["period_offset"]
                 timestamps = self.timestamps[timescale][period_offset:(period_offset+n_periods)]
                 timename = "timestamp"
-            else:
-                timestamps = range(1, n_periods+1)
-                timename = "block"
 
         else:
             timestamps = self.timestamps[timescale]
