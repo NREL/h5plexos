@@ -7,7 +7,7 @@ import re
 def issequence(x):
     return hasattr(x, '__iter__')
 
-version_rgx = re.compile("^v(\d+)\.(\d+)\.(\d+)$")
+version_rgx = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 
 class PLEXOSSolution:
 
